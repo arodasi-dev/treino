@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
 <script>
-  window.__HTMLBUILD='h4';  /* carimbo do index.html — serve pra saber se o shell atualizou no iPhone */
+  window.__HTMLBUILD='h5';  /* carimbo do index.html — serve pra saber se o shell atualizou no iPhone */
   (function(){
     var r=document.documentElement;
     function vh(){ return (window.visualViewport && window.visualViewport.height) || window.innerHeight || 0; }
@@ -103,7 +103,7 @@ h1,h2,h3{margin:0;text-wrap:balance;font-family:var(--font-display);letter-spaci
 
 #app{
   position:fixed; top:0; right:0; left:0; bottom:0;
-  height:calc(100dvh + env(safe-area-inset-bottom, 0px));  /* dvh para em 848; somo os 34px da barrinha pra chegar no fundo FÍSICO (882) */
+  height:100dvh;  /* tela visível (848). a barrinha do home fica SOBRE os 34px de baixo, não além — somar safe cortava o menu */
   display:flex; flex-direction:column;
   max-width:560px; margin:0 auto; background:transparent;
 }
@@ -286,7 +286,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:16px 0}
 .cal-foot{text-align:center;margin-top:14px;font-size:13px;color:var(--muted);font-weight:700}
 
 /* ---- Tela de login / status ---- */
-#gate{position:fixed;top:0;left:0;right:0;bottom:0;height:calc(100dvh + env(safe-area-inset-bottom, 0px));z-index:100;background:var(--bg);display:flex;
+#gate{position:fixed;top:0;left:0;right:0;bottom:0;height:100dvh;z-index:100;background:var(--bg);display:flex;
   flex-direction:column;align-items:center;justify-content:center;
   padding:24px;padding-top:calc(24px + env(safe-area-inset-top,0px));text-align:center}
 #gate .logo{width:72px;height:72px;border-radius:20px;margin-bottom:18px;
