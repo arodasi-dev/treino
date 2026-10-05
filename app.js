@@ -260,18 +260,30 @@ function resumeSession(){
   state.session = JSON.parse(JSON.stringify(state.draft));
   renderSession(); show('session');
 }
-/* ---------- Rascunho (pré-save): sobrevive a fechar o app ---------- */
+/* ---------- Rascunho (pré-save): sobrevive a fechar o app ----------
+   Salva na HORA no aparelho (localStorage, não perde ao fechar) e também
+   no banco (Firestore, com debounce) pra sincronizar entre aparelhos. */
 let draftTimer=null;
-function scheduleDraftSave(){ clearTimeout(draftTimer); draftTimer=setTimeout(saveDraft, 700); }
-async function saveDraft(){
+function saveDraft(){
   if(!state.session) return;
   const copy = JSON.parse(JSON.stringify(state.session));
   state.draft = copy;
-  try{ await DB.put('drafts', {id:'active', ...copy}); }catch(e){}
+  try{ localStorage.setItem('draft', JSON.stringify(copy)); }catch(e){}   // instantâneo e confiável
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(()=>{ try{ DB.put('drafts', {id:'active', ...copy}); }catch(e){} }, 600);  // nuvem
 }
+function scheduleDraftSave(){ saveDraft(); }   // localStorage já é imediato
 async function clearDraft(){
   state.draft = null;
+  try{ localStorage.removeItem('draft'); }catch(e){}
   try{ await DB.del('drafts','active'); }catch(e){}
+}
+async function loadDraft(){
+  // 1) tenta o banco (sincroniza entre aparelhos)
+  try{ const d = await DB.get('drafts','active'); if(d && d.entries && d.entries.length){ state.draft = d; return; } }catch(e){}
+  // 2) cai pro aparelho (localStorage)
+  try{ const ls = localStorage.getItem('draft'); if(ls){ const d = JSON.parse(ls); if(d && d.entries && d.entries.length){ state.draft = d; return; } } }catch(e){}
+  state.draft = null;
 }
 
 function renderSession(){
@@ -735,7 +747,7 @@ function renderSettings(){
       <button class="btn ghost sm" id="clearWBtn" style="width:100%;margin-bottom:10px">Excluir todos os treinos</button>
       <button class="btn danger sm" id="resetBtn" style="width:100%">Apagar tudo (treinos + histórico)</button>
     </div>
-    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 29 · sincronizado na nuvem</p>`;
+    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 30 · sincronizado na nuvem</p>`;
   $('logoutBtn').onclick = ()=>{
     showConfirm('Sair da conta?','Seus dados continuam salvos na nuvem. Faça login de novo quando quiser.','Sair',async()=>{
       closeSheet(); try{ await firebase.auth().signOut(); }catch(e){}
@@ -934,7 +946,7 @@ function renderAll(){ renderWorkouts(); renderHistory(); renderProgress(); rende
 async function loadData(){
   state.workouts = await DB.getAll('workouts');
   state.sessions = await DB.getAll('sessions');
-  try{ const d = await DB.get('drafts','active'); state.draft = (d && d.entries) ? d : null; }catch(e){ state.draft=null; }
+  await loadDraft();
   let inited=null; try{ inited = await DB.get('meta','init'); }catch(e){}
   if(!inited){
     if(!state.workouts.length){            // conta nova: cria o plano inicial uma única vez
