@@ -103,6 +103,7 @@ function show(view){
   // nav tabs
   const tab = (view==='detail'||view==='session') ? 'workouts' : view;
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  moveNavInd();
   // back button + title
   const back = (view==='detail'||view==='session'||view==='progress'&&false);
   $('backBtn').hidden = !(view==='detail'||view==='session');
@@ -110,6 +111,14 @@ function show(view){
   else if(view==='session'){ $('hdrTitle').textContent = state.session? state.session.name : 'Treino'; }
   else $('hdrTitle').textContent = TITLES[view]||'Treino';
 }
+function moveNavInd(){
+  const ind=document.querySelector('.nav-ind');
+  const btn=document.querySelector('nav button.active');
+  if(!ind||!btn) return;
+  const x = btn.offsetLeft + btn.offsetWidth/2 - ind.offsetWidth/2;
+  ind.style.left = Math.round(x)+'px';
+}
+addEventListener('resize', ()=>{ requestAnimationFrame(moveNavInd); });
 function curWorkout(){ return state.workouts.find(w=>w.id===state.detailId); }
 
 /* ===================================================================
@@ -750,7 +759,7 @@ function renderSettings(){
       <button class="btn ghost sm" id="clearWBtn" style="width:100%;margin-bottom:10px">Excluir todos os treinos</button>
       <button class="btn danger sm" id="resetBtn" style="width:100%">Apagar tudo (treinos + histórico)</button>
     </div>
-    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 36 · sincronizado na nuvem</p>
+    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 37 · sincronizado na nuvem</p>
     <p class="tiny muted" id="diag" style="text-align:center;margin-top:4px;opacity:.7"></p>`;
   setTimeout(()=>{
     const d=$('diag'); if(!d) return;
@@ -981,7 +990,7 @@ async function loadData(){
 
 /* ---------- Telas de abertura (gate) ---------- */
 function showGate(html){ $('gate').innerHTML = html; $('gate').hidden = false; $('app').hidden = true; }
-function enterApp(){ $('gate').hidden = true; $('app').hidden = false; }
+function enterApp(){ $('gate').hidden = true; $('app').hidden = false; requestAnimationFrame(()=>{ moveNavInd(); setTimeout(moveNavInd, 250); }); }
 
 function showConfigError(){
   showGate(`<div class="logo"><i class="fa-solid fa-triangle-exclamation"></i></div>

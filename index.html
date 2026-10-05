@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
 <script>
-  window.__HTMLBUILD='h3';  /* carimbo do index.html — serve pra saber se o shell atualizou no iPhone */
+  window.__HTMLBUILD='h4';  /* carimbo do index.html — serve pra saber se o shell atualizou no iPhone */
   (function(){
     var r=document.documentElement;
     function vh(){ return (window.visualViewport && window.visualViewport.height) || window.innerHeight || 0; }
@@ -88,12 +88,12 @@
 
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-/* html recebe a cor da BARRA (surface): assim a área segura embaixo do menu
-   e em cima do header fica da mesma cor das barras, sem faixa preta. */
-html{height:100%;margin:0;background:var(--surface);overflow:hidden}
+/* html/body recebem a cor do FUNDO (bg): no app o menu e o header cobrem as
+   barras; essa cor só aparece na zona segura do login, onde deve ser o bg. */
+html{height:100%;margin:0;background:var(--bg);overflow:hidden}
 body{height:100%;margin:0;overflow:hidden}
 body{
-  font-family:var(--font); background:var(--surface); color:var(--fg);
+  font-family:var(--font); background:var(--bg); color:var(--fg);
   -webkit-font-smoothing:antialiased; font-size:16px; line-height:1.45;
   overscroll-behavior-y:none;
 }
@@ -132,17 +132,20 @@ main{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch
 
 /* ---- Nav ---- */
 nav{
+  position:relative;
   flex:0 0 auto; display:flex; align-items:center; background:var(--surface); border-top:1px solid var(--line);
-  padding-top:var(--nav-pad); padding-bottom:var(--nav-pad);
+  padding-top:10px; padding-bottom:8px;
 }
 nav button{flex:1;background:none;border:none;color:var(--muted);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  padding:6px 0;margin:0 4px;border-radius:14px;font-size:13px;font-weight:600;
-  font-family:var(--font-display);transition:background .12s ease}
-nav button:active{background:var(--surface-2)}
-nav button svg{width:34px;height:34px;stroke:currentColor;fill:none;stroke-width:2}
-nav button i{font-size:32px;line-height:1;height:34px;display:flex;align-items:center}
+  display:flex;align-items:center;justify-content:center;
+  padding:8px 0;margin:0 4px;border-radius:14px;
+  transition:color .15s ease, transform .15s ease}
+nav button:active{transform:scale(.88)}
+nav button i{font-size:30px;line-height:1;display:flex;align-items:center;justify-content:center}
 nav button.active{color:var(--accent)}
+/* barrinha deslizante no topo do menu — some pra cima do ícone ativo */
+.nav-ind{position:absolute;top:0;left:-40px;width:30px;height:4px;border-radius:0 0 4px 4px;
+  background:var(--accent);transition:left .28s cubic-bezier(.4,0,.2,1);pointer-events:none}
 
 /* ---- Cards ---- */
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
@@ -330,21 +333,18 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:16px 0}
   </div>
 
   <nav>
-    <button data-tab="workouts" class="active">
+    <div class="nav-ind" aria-hidden="true"></div>
+    <button data-tab="workouts" class="active" aria-label="Treinos">
       <i class="fa-solid fa-dumbbell" aria-hidden="true"></i>
-      Treinos
     </button>
-    <button data-tab="history">
+    <button data-tab="history" aria-label="Histórico">
       <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
-      Histórico
     </button>
-    <button data-tab="progress">
+    <button data-tab="progress" aria-label="Progresso">
       <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
-      Progresso
     </button>
-    <button data-tab="settings">
+    <button data-tab="settings" aria-label="Ajustes">
       <i class="fa-solid fa-gears" aria-hidden="true"></i>
-      Ajustes
     </button>
   </nav>
 </div>
