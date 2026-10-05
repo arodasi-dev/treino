@@ -23,13 +23,23 @@
 
 <script>
   (function(){
-    function setH(){ try{ document.documentElement.style.setProperty('--app-h', window.innerHeight + 'px'); }catch(e){} }
+    var r=document.documentElement;
+    function vh(){ return (window.visualViewport && window.visualViewport.height) || window.innerHeight || 0; }
+    function setH(){ var v=vh(); if(v) r.style.setProperty('--app-h', v+'px'); }
     setH();
+    // iOS demora pra "assentar" a altura real ao abrir: re-mede várias vezes nos primeiros instantes
+    [0,1,16,40,80,150,300,600,1000].forEach(function(t){ setTimeout(setH,t); });
+    if(window.requestAnimationFrame){ requestAnimationFrame(function(){ setH(); requestAnimationFrame(setH); }); }
     addEventListener('resize', setH);
-    addEventListener('orientationchange', function(){ setTimeout(setH, 250); });
+    addEventListener('orientationchange', function(){ setTimeout(setH,200); setTimeout(setH,500); });
     addEventListener('pageshow', setH);
-    document.addEventListener('visibilitychange', function(){ if(!document.hidden) setH(); });
-    addEventListener('load', function(){ setH(); setTimeout(setH, 300); });
+    addEventListener('load', setH);
+    addEventListener('focus', setH);
+    document.addEventListener('visibilitychange', function(){ if(!document.hidden){ setH(); setTimeout(setH,150); } });
+    if(window.visualViewport){
+      window.visualViewport.addEventListener('resize', setH);
+      window.visualViewport.addEventListener('scroll', setH);
+    }
   })();
 </script>
 
@@ -271,7 +281,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:16px 0}
 .cal-foot{text-align:center;margin-top:14px;font-size:13px;color:var(--muted);font-weight:700}
 
 /* ---- Tela de login / status ---- */
-#gate{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;
+#gate{position:fixed;top:0;left:0;right:0;height:var(--app-h,100%);z-index:100;background:var(--bg);display:flex;
   flex-direction:column;align-items:center;justify-content:center;
   padding:24px;padding-top:calc(24px + env(safe-area-inset-top,0px));text-align:center}
 #gate .logo{width:72px;height:72px;border-radius:20px;margin-bottom:18px;
