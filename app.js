@@ -260,11 +260,14 @@ function renderSession(){
         <div class="tiny muted" style="margin-bottom:10px">Meta: ${esc(e.reps)} reps · descanso ${e.rest}s</div>
         <div class="col-head"><span>Kg</span><span>Reps</span><span class="sp"></span></div>
         ${e.sets.map((st,si)=>`
-          <div class="set-line ${st.done?'done':''}" data-ei="${ei}" data-si="${si}">
-            <span class="set-no">${si+1}</span>
-            <input type="number" inputmode="decimal" min="0" step="any" placeholder="kg" value="${st.weight??''}" data-f="weight">
-            <input type="number" inputmode="numeric" min="0" step="1" placeholder="reps" value="${st.reps??''}" data-f="reps">
-            <button class="chk ${st.done?'on':''}" data-chk aria-label="feito"><i class="fa-solid fa-check"></i></button>
+          <div class="set-wrap" data-ei="${ei}" data-si="${si}">
+            <button class="set-del" data-del aria-label="remover série"><i class="fa-solid fa-trash"></i></button>
+            <div class="set-line ${st.done?'done':''}" data-ei="${ei}" data-si="${si}">
+              <span class="set-no">${si+1}</span>
+              <input type="number" inputmode="decimal" min="0" step="any" placeholder="kg" value="${st.weight??''}" data-f="weight" onfocus="if(this.value==='0')this.value='';this.select()">
+              <input type="number" inputmode="numeric" min="0" step="1" placeholder="reps" value="${st.reps??''}" data-f="reps" onfocus="if(this.value==='0')this.value='';this.select()">
+              <button class="chk ${st.done?'on':''}" data-chk aria-label="feito"><i class="fa-solid fa-check"></i></button>
+            </div>
           </div>`).join('')}
         <div class="row" style="gap:12px;margin-top:12px;align-items:center">
           <button class="btn sm" data-rest="${ei}" style="background:var(--accent2-soft);color:var(--accent2)"><i class="fa-solid fa-stopwatch"></i> Descansar ${e.rest}s</button>
@@ -307,8 +310,46 @@ function renderSession(){
   el.querySelectorAll('[data-rest]').forEach(b=>{
     b.onclick = ()=>{ const e=state.session.entries[+b.dataset.rest]; triggerRest(e.rest); };
   });
+  bindSwipeDelete(el);
   $('finishBtn').onclick = finishSession;
   $('cancelBtn').onclick = ()=>{ if(window.__confirm){} cancelSession(); };
+}
+
+/* deslizar a série pro lado -> revela lixeira pra remover */
+function bindSwipeDelete(el){
+  el.querySelectorAll('.set-wrap').forEach(wrap=>{
+    const line = wrap.querySelector('.set-line');
+    let x0=0,y0=0,dx=0,drag=false,decided=false;
+    line.addEventListener('touchstart', e=>{
+      const t=e.touches[0]; x0=t.clientX; y0=t.clientY; dx=0; drag=false; decided=false;
+      line.style.transition='none';
+    }, {passive:true});
+    line.addEventListener('touchmove', e=>{
+      const t=e.touches[0], mx=t.clientX-x0, my=t.clientY-y0;
+      if(!decided && (Math.abs(mx)>8 || Math.abs(my)>8)){ decided=true; drag=Math.abs(mx)>Math.abs(my); }
+      if(drag){
+        e.preventDefault();
+        const base = wrap.classList.contains('open') ? -72 : 0;
+        dx = Math.max(-72, Math.min(0, base+mx));
+        line.style.transform='translateX('+dx+'px)';
+      }
+    }, {passive:false});
+    line.addEventListener('touchend', ()=>{
+      line.style.transition=''; line.style.transform='';
+      if(drag){
+        const open = dx < -36;
+        el.querySelectorAll('.set-wrap.open').forEach(w=>{ if(w!==wrap) w.classList.remove('open'); });
+        wrap.classList.toggle('open', open);
+      }
+    });
+    wrap.querySelector('[data-del]').onclick = ()=>{
+      const ei=+wrap.dataset.ei, si=+wrap.dataset.si;
+      const entry=state.session.entries[ei];
+      if(entry.sets.length<=1){ toast('Precisa ter ao menos 1 série'); wrap.classList.remove('open'); return; }
+      entry.sets.splice(si,1);
+      renderSession();
+    };
+  });
 }
 function updateSessionCount(){
   const s=state.session; if(!s) return;
@@ -759,9 +800,9 @@ function editExercise(wid, exid){
     </div>
     <div class="grid2">
       <div class="field"><label>Peso (kg)</label>
-        <input id="eWeight" type="number" inputmode="decimal" min="0" step="any" value="${ex?ex.weight:0}"></div>
+        <input id="eWeight" type="number" inputmode="decimal" min="0" step="any" value="${ex?ex.weight:0}" onfocus="if(this.value==='0')this.value='';this.select()"></div>
       <div class="field"><label>Descanso (s)</label>
-        <input id="eRest" type="number" inputmode="numeric" min="0" step="5" value="${ex?ex.rest:60}"></div>
+        <input id="eRest" type="number" inputmode="numeric" min="0" step="5" value="${ex?ex.rest:60}" onfocus="if(this.value==='0')this.value='';this.select()"></div>
     </div>
     <div class="field"><label>Observação (opcional)</label>
       <input id="eNotes" placeholder="Ex: pegada fechada" value="${ex?esc(ex.notes||''):''}"></div>
