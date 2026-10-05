@@ -908,19 +908,27 @@ function showLogin(){
     </form>`);
   const sw=$('authSwitch'); if(sw) sw.onclick = ()=>{ authMode = isLogin?'signup':'login'; showLogin(); };
   const other=$('authOther'); if(other) other.onclick = ()=>{ try{localStorage.removeItem('lastEmail');}catch(e){} authMode='login'; showLogin(); };
+  let authBusy = false;
   $('authForm').onsubmit = async e=>{
     e.preventDefault();
+    if(authBusy) return;                               // evita cliques repetidos
     const email = $('authEmail').value.trim().toLowerCase(), pass = $('authPass').value;
     if(!email || pass.length < 6){ authMsg('err','Preencha e-mail e senha (mín. 6).'); return; }
     if(!isLogin && pass !== $('authPass2').value){ authMsg('err','As senhas não são iguais.'); return; }
+    authBusy = true;
     $('authBtn').disabled = true; $('authBtn').textContent = 'Aguarde…';
+    authMsg('', '');                                   // limpa erro anterior
+    const reset = ()=>{ authBusy=false; const b=$('authBtn'); if(b){ b.disabled=false; b.textContent=isLogin?'Entrar':'Criar conta'; } };
     try{
-      if(isLogin) await firebase.auth().signInWithEmailAndPassword(email, pass);
-      else await firebase.auth().createUserWithEmailAndPassword(email, pass);
+      const op = isLogin
+        ? firebase.auth().signInWithEmailAndPassword(email, pass)
+        : firebase.auth().createUserWithEmailAndPassword(email, pass);
+      const timeout = new Promise((_,rej)=>setTimeout(()=>rej({code:'app/timeout'}), 15000));
+      await Promise.race([op, timeout]);               // nunca trava pra sempre
       try{ localStorage.setItem('lastEmail', email); }catch(e){}
-      // onAuthStateChanged assume daqui
+      // sucesso: onAuthStateChanged assume a tela daqui (não reabilita o botão)
     }catch(err){
-      $('authBtn').disabled = false; $('authBtn').textContent = isLogin?'Entrar':'Criar conta';
+      reset();
       authMsg('err', authErrMsg(err));
     }
   };
@@ -938,6 +946,7 @@ function authErrMsg(err){
     'auth/network-request-failed':'Sem internet. Tente de novo.',
     'auth/too-many-requests':'Muitas tentativas. Aguarde um pouco.',
     'auth/operation-not-allowed':'Ative o login por E-mail/Senha no Firebase (veja o guia).',
+    'app/timeout':'Sem resposta do servidor. Confira a internet e tente de novo.',
   })[err && err.code] || ('Erro: ' + (err && (err.code||err.message)));
 }
 
