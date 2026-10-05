@@ -80,7 +80,7 @@
 /* html recebe a cor da BARRA (surface): assim a área segura embaixo do menu
    e em cima do header fica da mesma cor das barras, sem faixa preta. */
 html{height:100%;margin:0;background:var(--surface);overflow:hidden}
-body{min-height:100%;margin:0;overflow:hidden;position:fixed;inset:0}
+body{height:100%;margin:0;overflow:hidden}
 body{
   font-family:var(--font); background:var(--surface); color:var(--fg);
   -webkit-font-smoothing:antialiased; font-size:16px; line-height:1.45;
@@ -91,7 +91,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 h1,h2,h3{margin:0;text-wrap:balance;font-family:var(--font-display);letter-spacing:.01em}
 
 #app{
-  height:100%;
+  height:100%; height:var(--app-h, 100%);
   display:flex; flex-direction:column;
   max-width:560px; margin:0 auto; background:transparent;
 }
@@ -125,8 +125,9 @@ nav{
 }
 nav button{flex:1;background:none;border:none;color:var(--muted);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  padding:2px 0;font-size:13px;font-weight:600;
-  font-family:var(--font-display)}
+  padding:6px 0;margin:0 4px;border-radius:14px;font-size:13px;font-weight:600;
+  font-family:var(--font-display);transition:background .12s ease}
+nav button:active{background:var(--surface-2)}
 nav button svg{width:34px;height:34px;stroke:currentColor;fill:none;stroke-width:2}
 nav button i{font-size:32px;line-height:1;height:34px;display:flex;align-items:center}
 nav button.active{color:var(--accent)}
