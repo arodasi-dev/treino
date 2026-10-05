@@ -46,8 +46,8 @@
   --danger:#C85A6B; --danger-soft:#F3E0E3;
   --radius:20px; --radius-sm:14px;
   --shadow:none;
-  --header-h:56px; --nav-h:56px;
-  --nav-pad:max(4px, calc(env(safe-area-inset-bottom,0px) - 28px));
+  --header-h:56px; --nav-h:58px;
+  --nav-pad:max(8px, calc(env(safe-area-inset-bottom,0px) - 22px));
   --font:'Rubik', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-display:'Rubik', -apple-system, system-ui, sans-serif;
   color-scheme: light;
@@ -79,8 +79,8 @@
 [hidden]{display:none!important}
 /* html recebe a cor da BARRA (surface): assim a área segura embaixo do menu
    e em cima do header fica da mesma cor das barras, sem faixa preta. */
-html{height:100%;margin:0;background:var(--surface)}
-body{min-height:100%;margin:0}
+html{height:100%;margin:0;background:var(--surface);overflow:hidden}
+body{min-height:100%;margin:0;overflow:hidden;position:fixed;inset:0}
 body{
   font-family:var(--font); background:var(--surface); color:var(--fg);
   -webkit-font-smoothing:antialiased; font-size:16px; line-height:1.45;
@@ -120,15 +120,15 @@ main{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch
 
 /* ---- Nav ---- */
 nav{
-  flex:0 0 auto; display:flex; background:var(--surface); border-top:1px solid var(--line);
-  padding-top:10px; padding-bottom:var(--nav-pad);
+  flex:0 0 auto; display:flex; align-items:center; background:var(--surface); border-top:1px solid var(--line);
+  padding-top:var(--nav-pad); padding-bottom:var(--nav-pad);
 }
 nav button{flex:1;background:none;border:none;color:var(--muted);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
-  height:var(--nav-h);font-size:13px;font-weight:600;
+  padding:6px 0;font-size:14px;font-weight:600;
   font-family:var(--font-display)}
-nav button svg{width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:2}
-nav button i{font-size:28px;line-height:1;height:30px;display:flex;align-items:center}
+nav button svg{width:34px;height:34px;stroke:currentColor;fill:none;stroke-width:2}
+nav button i{font-size:32px;line-height:1;height:34px;display:flex;align-items:center}
 nav button.active{color:var(--accent)}
 
 /* ---- Cards ---- */
