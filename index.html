@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
 <script>
-  window.__HTMLBUILD='h8';  /* carimbo do index.html — serve pra saber se o shell atualizou no iPhone */
+  window.__HTMLBUILD='h10';  /* carimbo do index.html — serve pra saber se o shell atualizou no iPhone */
   (function(){
     var r=document.documentElement;
     function vh(){ return (window.visualViewport && window.visualViewport.height) || window.innerHeight || 0; }
@@ -41,6 +41,22 @@
       window.visualViewport.addEventListener('resize', setH);
       window.visualViewport.addEventListener('scroll', setH);
     }
+  })();
+
+  /* Mata o ZOOM do iOS (pinça e duplo-toque) que empurrava e travava a tela.
+     touch-action já ajuda; isto cobre os casos que o iOS ignora. */
+  (function(){
+    document.addEventListener('gesturestart', function(e){ e.preventDefault(); }, {passive:false});
+    document.addEventListener('gesturechange', function(e){ e.preventDefault(); }, {passive:false});
+    document.addEventListener('gestureend', function(e){ e.preventDefault(); }, {passive:false});
+    var last=0, lx=0, ly=0;
+    document.addEventListener('touchend', function(e){
+      var now=Date.now();
+      var t=e.changedTouches&&e.changedTouches[0];
+      var x=t?t.clientX:0, y=t?t.clientY:0;
+      if(now-last<=350 && Math.abs(x-lx)<40 && Math.abs(y-ly)<40){ e.preventDefault(); }  /* 2 toques juntos = zoom, cancela */
+      last=now; lx=x; ly=y;
+    }, {passive:false});
   })();
 </script>
 
@@ -67,7 +83,7 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#535657; --surface:#4F646F; --surface-2:#455862;
-    --gate-bg:#3F4142;   /* fundo do login (escuro) — mais escuro que o menu pra destacar */
+    --gate-bg:#535657;   /* fundo do login = mesmo do bg do app */
     --fg:#F4FAFF; --muted:#DEE7E7; --line:#5E7681;
     --accent:#B7ADCF; --accent-fg:#3A3647; --accent-soft:#5B5568;
     --accent2:#C9BFE3; --accent2-fg:#3A3647; --accent2-soft:#5B5568;
@@ -79,7 +95,7 @@
 }
 :root[data-theme="dark"]{
   --bg:#535657; --surface:#4F646F; --surface-2:#455862;
-  --gate-bg:#3F4142;
+  --gate-bg:#535657;
   --fg:#F4FAFF; --muted:#DEE7E7; --line:#5E7681;
   --accent:#B7ADCF; --accent-fg:#3A3647; --accent-soft:#5B5568;
   --accent2:#C9BFE3; --accent2-fg:#3A3647; --accent2-soft:#5B5568;
@@ -103,7 +119,7 @@ body{
   -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;  /* sem lupa/seleção no toque duplo */
 }
 input,textarea,select,[contenteditable]{ -webkit-user-select:text; user-select:text; }
-main,nav,header,.view,button,.card,.seg,a,.sheet{touch-action:manipulation}
+*{touch-action:manipulation}   /* mata o double-tap-zoom em QUALQUER elemento (inclusive barras do gráfico) */
 button{font-family:inherit;font-size:inherit;cursor:pointer}
 input,select,textarea{font-family:inherit;font-size:16px}
 h1,h2,h3{margin:0;text-wrap:balance;font-family:var(--font-display);letter-spacing:.01em}
