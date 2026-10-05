@@ -320,9 +320,9 @@ function renderSession(){
           <button class="link small" data-addset="${ei}">+ série</button>
         </div>
       </div>`).join('')}
-    <div class="btn-stack" style="margin-top:8px">
-      <button class="btn ok" id="finishBtn"><i class="fa-solid fa-check"></i>  Finalizar e salvar</button>
-      <button class="btn ghost" id="pauseBtn"><i class="fa-solid fa-floppy-disk"></i>  Salvar e continuar depois</button>
+    <div class="tiny muted" style="text-align:center;margin:10px 0 2px"><i class="fa-solid fa-cloud"></i> Salvo automaticamente — pode fechar e voltar quando quiser</div>
+    <div class="btn-stack" style="margin-top:6px">
+      <button class="btn ok" id="finishBtn"><i class="fa-solid fa-flag-checkered"></i>  Finalizar treino</button>
       <button class="btn danger sm" id="cancelBtn" style="width:100%">Descartar treino</button>
     </div>`;
 
@@ -362,7 +362,6 @@ function renderSession(){
   });
   bindSwipeDelete(el);
   $('finishBtn').onclick = finishSession;
-  $('pauseBtn').onclick = pauseSession;
   $('cancelBtn').onclick = cancelSession;
 }
 
@@ -415,28 +414,33 @@ function updateSessionCount(){
 }
 async function finishSession(){
   const s = state.session; if(!s) return;
-  // monta uma CÓPIA só com séries feitas — sem mexer na sessão ativa
-  const entries = s.entries.map(e=>({...e, sets: e.sets.filter(x=>x.done)})).filter(e=>e.sets.length);
-  if(!entries.length){ toast('Marque ao menos 1 série ✓ antes de finalizar'); return; }  // NÃO destrói a sessão
-  const saved = JSON.parse(JSON.stringify(s));
-  saved.entries = entries;
-  saved.endedAt = Date.now();
-  saved.durationMs = s.startedAt ? (saved.endedAt - s.startedAt) : null;
-  saved.sets = entries.reduce((a,e)=>a+e.sets.length,0);
-  saved.volume = entries.reduce((a,e)=>a+e.sets.reduce((x,st)=>x+(parseFloat(st.weight)||0)*(parseFloat(st.reps)||0),0),0);
-  await DB.put('sessions', saved);
-  state.sessions.push(saved);
-  state.session = null; await clearDraft(); stopRest();
-  toast('Treino salvo! 💪');
-  show('history'); renderHistory();
+  // registra as séries marcadas OU com repetições preenchidas (sem bloquear)
+  const entries = s.entries
+    .map(e=>({...e, sets: e.sets.filter(st=> st.done || (st.reps!=='' && st.reps!=null && parseFloat(st.reps)>0) )}))
+    .filter(e=>e.sets.length);
+  state.session = null; await clearDraft(); stopRest();   // encerra e limpa o rascunho — já estava tudo salvo
+  if(entries.length){
+    const saved = JSON.parse(JSON.stringify(s));
+    saved.entries = entries;
+    saved.endedAt = Date.now();
+    saved.durationMs = s.startedAt ? (saved.endedAt - s.startedAt) : null;
+    saved.sets = entries.reduce((a,e)=>a+e.sets.length,0);
+    saved.volume = entries.reduce((a,e)=>a+e.sets.reduce((x,st)=>x+(parseFloat(st.weight)||0)*(parseFloat(st.reps)||0),0),0);
+    try{ await DB.put('sessions', saved); }catch(e){ console.error(e); }
+    state.sessions.push(saved);
+    toast('Treino finalizado! 💪');
+    show('history'); renderHistory();
+  } else {
+    toast('Treino encerrado');
+    show('workouts'); renderWorkouts();
+  }
 }
-/* salva sem finalizar — fica como rascunho pra continuar depois */
+/* sai do treino mantendo o rascunho (continua salvo automaticamente) */
 async function pauseSession(){
   if(!state.session) return;
-  await saveDraft();
+  saveDraft();
   stopRest();
   state.session = null;
-  toast('Treino salvo pra continuar depois');
   show('workouts'); renderWorkouts();
 }
 function cancelSession(){
@@ -747,7 +751,7 @@ function renderSettings(){
       <button class="btn ghost sm" id="clearWBtn" style="width:100%;margin-bottom:10px">Excluir todos os treinos</button>
       <button class="btn danger sm" id="resetBtn" style="width:100%">Apagar tudo (treinos + histórico)</button>
     </div>
-    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 30 · sincronizado na nuvem</p>`;
+    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 31 · sincronizado na nuvem</p>`;
   $('logoutBtn').onclick = ()=>{
     showConfirm('Sair da conta?','Seus dados continuam salvos na nuvem. Faça login de novo quando quiser.','Sair',async()=>{
       closeSheet(); try{ await firebase.auth().signOut(); }catch(e){}
