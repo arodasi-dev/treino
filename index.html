@@ -35,6 +35,7 @@
   --radius:20px; --radius-sm:14px;
   --shadow:none;
   --header-h:56px; --nav-h:56px;
+  --nav-pad:max(10px, calc(env(safe-area-inset-bottom,0px) - 18px));
   --font:'Rubik', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-display:'Rubik', -apple-system, system-ui, sans-serif;
   color-scheme: light;
@@ -67,7 +68,7 @@
 /* html recebe a cor da BARRA (surface): assim a área segura embaixo do menu
    e em cima do header fica da mesma cor das barras, sem faixa preta. */
 html{height:100%;margin:0;background:var(--surface)}
-body{height:100%;margin:0}
+body{min-height:100%;margin:0}
 body{
   font-family:var(--font); background:var(--surface); color:var(--fg);
   -webkit-font-smoothing:antialiased; font-size:16px; line-height:1.45;
@@ -78,7 +79,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
 h1,h2,h3{margin:0;text-wrap:balance;font-family:var(--font-display);letter-spacing:.01em}
 
 #app{
-  display:flex; flex-direction:column; height:100%;
+  display:flex; flex-direction:column;
+  height:100vh; height:100dvh;
   max-width:560px; margin:0 auto; background:transparent;
 }
 
@@ -98,18 +100,16 @@ header .back{background:none;border:none;color:var(--accent);font-weight:600;
   border-radius:50%;display:grid;place-items:center;font-size:18px}
 
 /* ---- Content ---- */
-main{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);
-  padding:16px; padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 24px)}
+main{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);
+  padding:16px; padding-bottom:88px}
 .view{display:none;animation:fade .18s ease}
 .view.active{display:block}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 
 /* ---- Nav ---- */
 nav{
-  flex:0 0 auto; position:fixed; left:0; right:0; bottom:0; z-index:20;
-  display:flex; background:var(--surface); border-top:1px solid var(--line);
-  padding-bottom:max(14px, calc(env(safe-area-inset-bottom,0px) - 16px));
-  max-width:560px; margin:0 auto;
+  flex:0 0 auto; display:flex; background:var(--surface); border-top:1px solid var(--line);
+  padding-bottom:var(--nav-pad);
 }
 nav button{flex:1;background:none;border:none;color:var(--muted);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
@@ -201,7 +201,7 @@ nav button.active{color:var(--accent)}
 .col-head .sp{width:38px;flex:0 0 auto}
 
 /* ---- Rest timer bar ---- */
-#rest{position:fixed;left:12px;right:12px;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 10px);
+#rest{position:fixed;left:12px;right:12px;bottom:calc(var(--nav-h) + var(--nav-pad) + 10px);
   max-width:536px;margin:0 auto;background:var(--accent2);color:var(--accent2-fg);
   border-radius:14px;padding:12px 16px;display:none;align-items:center;gap:14px;z-index:30}
 #rest.show{display:flex}
@@ -223,7 +223,7 @@ nav button.active{color:var(--accent)}
   position:relative}
 .spark .bar.last{background:var(--accent)}
 
-.fab{position:fixed;right:16px;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 12px);
+.fab{position:fixed;right:16px;bottom:calc(var(--nav-h) + var(--nav-pad) + 14px);
   width:56px;height:56px;border-radius:50%;background:var(--accent);color:var(--accent-fg);
   border:none;font-size:28px;z-index:25;
   display:grid;place-items:center;max-width:560px}

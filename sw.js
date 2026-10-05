@@ -1,6 +1,9 @@
-/* Service worker — cache do app p/ funcionar offline.
-   Troque a versão quando atualizar os arquivos. */
-const CACHE = 'treino-v15';
+/* Service worker — mantém o app atualizado e funcionando offline.
+   Estratégia:
+   - Arquivos do app (mesmo domínio): NETWORK-FIRST → sempre pega a versão nova
+     quando tem internet; se estiver offline, usa o cache.
+   - CDNs (Firebase, fontes, Font Awesome): cache-first (mais rápido). */
+const CACHE = 'treino-v16';
 const ASSETS = [
   './',
   './index.html',
@@ -26,11 +29,27 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-  e.respondWith(
-    caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
-      const copy = res.clone();
-      caches.open(CACHE).then(c => c.put(e.request, copy)).catch(()=>{});
-      return res;
-    }).catch(() => caches.match('./index.html')))
-  );
+  const url = new URL(e.request.url);
+
+  if (url.origin === location.origin) {
+    // NETWORK-FIRST: versão nova sempre que houver internet
+    e.respondWith(
+      fetch(e.request).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(()=>{});
+        return res;
+      }).catch(() =>
+        caches.match(e.request).then(hit => hit || caches.match('./index.html'))
+      )
+    );
+  } else {
+    // CDNs: cache-first
+    e.respondWith(
+      caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(()=>{});
+        return res;
+      }))
+    );
+  }
 });
