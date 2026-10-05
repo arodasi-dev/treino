@@ -29,7 +29,7 @@ const DB = (() => {
 })();
 
 /* ---------- Estado em memória ---------- */
-const state = { workouts:[], sessions:[], view:'workouts', detailId:null, session:null, currentUser:null };
+const state = { workouts:[], sessions:[], view:'workouts', detailId:null, session:null, draft:null, currentUser:null };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 const $ = id => document.getElementById(id);
 
@@ -45,6 +45,8 @@ function fmtDate(ts){
 function dayKey(ts){ return new Date(ts).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}); }
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function mmss(sec){ const m=Math.floor(sec/60), s=sec%60; return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'); }
+function fmtDur(ms){ if(!ms||ms<0) return ''; const m=Math.round(ms/60000); if(m<1) return 'menos de 1 min'; if(m<60) return m+' min'; const h=Math.floor(m/60), mm=m%60; return h+'h'+(mm?(' '+String(mm).padStart(2,'0')+'min'):''); }
+function hhmm(ts){ return new Date(ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
 
 /* ---------- Dados de exemplo (primeiro uso) ---------- */
 function seed(){
@@ -116,11 +118,22 @@ function curWorkout(){ return state.workouts.find(w=>w.id===state.detailId); }
 function renderWorkouts(){
   const el = $('view-workouts');
   const list = [...state.workouts].sort((a,b)=>a.order-b.order);
+  const draftBanner = state.draft ? `
+    <div class="card tap" id="resumeCard" style="border-color:var(--accent);background:var(--accent-soft);margin-bottom:16px">
+      <div class="row spread">
+        <div style="min-width:0">
+          <div class="tiny" style="color:var(--accent);font-weight:800;text-transform:uppercase;letter-spacing:.05em">Treino em andamento</div>
+          <div style="font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(state.draft.name)}</div>
+          <div class="small muted" style="margin-top:2px">Toque pra continuar de onde parou</div>
+        </div>
+        <div style="color:var(--accent);font-size:22px"><i class="fa-solid fa-play"></i></div>
+      </div>
+    </div>` : '';
   if(!list.length){
-    el.innerHTML = `<div class="empty"><div class="big"><i class="fa-solid fa-dumbbell"></i></div>
+    el.innerHTML = draftBanner + `<div class="empty"><div class="big"><i class="fa-solid fa-dumbbell"></i></div>
       <p>Nenhum treino ainda.<br>Crie o seu primeiro!</p></div>`;
   } else {
-    el.innerHTML = `<div class="sec-head"><h2>Seus treinos</h2></div>` +
+    el.innerHTML = draftBanner + `<div class="sec-head"><h2>Seus treinos</h2></div>` +
       list.map(w=>{
         const n = w.exercises.length;
         const last = lastSessionOf(w.id);
@@ -135,6 +148,7 @@ function renderWorkouts(){
         </div>`;
       }).join('');
   }
+  const rc=$('resumeCard'); if(rc) rc.onclick = resumeSession;
   if(!$('fab-workouts')){
     const fab = document.createElement('button');
     fab.className='fab'; fab.id='fab-workouts'; fab.textContent='+';
@@ -224,7 +238,7 @@ function startSession(wid){
   // pré-preenche com últimos pesos usados, se houver histórico
   const prev = lastSessionOf(wid);
   state.session = {
-    id: uid(), workoutId: w.id, name: w.name, date: Date.now(),
+    id: uid(), workoutId: w.id, name: w.name, date: Date.now(), startedAt: Date.now(),
     entries: w.exercises.map(ex=>{
       const old = prev && prev.entries.find(e=>e.exerciseId===ex.id);
       return {
@@ -237,7 +251,27 @@ function startSession(wid){
       };
     })
   };
+  saveDraft();              // já guarda o rascunho (pré-save)
   renderSession(); show('session');
+}
+/* retoma um treino não finalizado (rascunho) */
+function resumeSession(){
+  if(!state.draft) return;
+  state.session = JSON.parse(JSON.stringify(state.draft));
+  renderSession(); show('session');
+}
+/* ---------- Rascunho (pré-save): sobrevive a fechar o app ---------- */
+let draftTimer=null;
+function scheduleDraftSave(){ clearTimeout(draftTimer); draftTimer=setTimeout(saveDraft, 700); }
+async function saveDraft(){
+  if(!state.session) return;
+  const copy = JSON.parse(JSON.stringify(state.session));
+  state.draft = copy;
+  try{ await DB.put('drafts', {id:'active', ...copy}); }catch(e){}
+}
+async function clearDraft(){
+  state.draft = null;
+  try{ await DB.del('drafts','active'); }catch(e){}
 }
 
 function renderSession(){
@@ -276,7 +310,8 @@ function renderSession(){
       </div>`).join('')}
     <div class="btn-stack" style="margin-top:8px">
       <button class="btn ok" id="finishBtn"><i class="fa-solid fa-check"></i>  Finalizar e salvar</button>
-      <button class="btn ghost sm" id="cancelBtn" style="width:100%">Cancelar sem salvar</button>
+      <button class="btn ghost" id="pauseBtn"><i class="fa-solid fa-floppy-disk"></i>  Salvar e continuar depois</button>
+      <button class="btn danger sm" id="cancelBtn" style="width:100%">Descartar treino</button>
     </div>`;
 
   // inputs -> state
@@ -285,6 +320,7 @@ function renderSession(){
       const l=inp.closest('.set-line');
       if(inp.value!=='' && parseFloat(inp.value)<0) inp.value='0';   // sem negativos
       state.session.entries[+l.dataset.ei].sets[+l.dataset.si][inp.dataset.f] = inp.value;
+      scheduleDraftSave();
     };
   });
   // check -> marca feito + inicia descanso
@@ -296,6 +332,7 @@ function renderSession(){
       btn.classList.toggle('on', st.done);
       l.classList.toggle('done', st.done);
       updateSessionCount();
+      scheduleDraftSave();
       // NÃO inicia o descanso automaticamente — você dispara no botão "Descansar"
     };
   });
@@ -304,6 +341,7 @@ function renderSession(){
       const e=state.session.entries[+b.dataset.addset];
       const last=e.sets[e.sets.length-1];
       e.sets.push({weight:last?last.weight:0, reps:'', done:false});
+      scheduleDraftSave();
       renderSession();
     };
   });
@@ -312,7 +350,8 @@ function renderSession(){
   });
   bindSwipeDelete(el);
   $('finishBtn').onclick = finishSession;
-  $('cancelBtn').onclick = ()=>{ if(window.__confirm){} cancelSession(); };
+  $('pauseBtn').onclick = pauseSession;
+  $('cancelBtn').onclick = cancelSession;
 }
 
 /* deslizar a série pro lado -> revela lixeira pra remover */
@@ -347,6 +386,7 @@ function bindSwipeDelete(el){
       const entry=state.session.entries[ei];
       if(entry.sets.length<=1){ toast('Precisa ter ao menos 1 série'); wrap.classList.remove('open'); return; }
       entry.sets.splice(si,1);
+      scheduleDraftSave();
       renderSession();
     };
   });
@@ -363,20 +403,33 @@ function updateSessionCount(){
 }
 async function finishSession(){
   const s = state.session; if(!s) return;
-  // mantém só exercícios com ao menos 1 série feita
-  s.entries = s.entries.map(e=>({...e, sets: e.sets.filter(x=>x.done)})).filter(e=>e.sets.length);
-  if(!s.entries.length){ toast('Marque ao menos 1 série'); return; }
-  s.sets = s.entries.reduce((a,e)=>a+e.sets.length,0);
-  s.volume = s.entries.reduce((a,e)=>a+e.sets.reduce((x,st)=>x+(parseFloat(st.weight)||0)*(parseFloat(st.reps)||0),0),0);
-  await DB.put('sessions', JSON.parse(JSON.stringify(s)));
-  state.sessions.push(s);
-  state.session = null; stopRest();
-  toast('Treino salvo!');
+  // monta uma CÓPIA só com séries feitas — sem mexer na sessão ativa
+  const entries = s.entries.map(e=>({...e, sets: e.sets.filter(x=>x.done)})).filter(e=>e.sets.length);
+  if(!entries.length){ toast('Marque ao menos 1 série ✓ antes de finalizar'); return; }  // NÃO destrói a sessão
+  const saved = JSON.parse(JSON.stringify(s));
+  saved.entries = entries;
+  saved.endedAt = Date.now();
+  saved.durationMs = s.startedAt ? (saved.endedAt - s.startedAt) : null;
+  saved.sets = entries.reduce((a,e)=>a+e.sets.length,0);
+  saved.volume = entries.reduce((a,e)=>a+e.sets.reduce((x,st)=>x+(parseFloat(st.weight)||0)*(parseFloat(st.reps)||0),0),0);
+  await DB.put('sessions', saved);
+  state.sessions.push(saved);
+  state.session = null; await clearDraft(); stopRest();
+  toast('Treino salvo! 💪');
   show('history'); renderHistory();
 }
+/* salva sem finalizar — fica como rascunho pra continuar depois */
+async function pauseSession(){
+  if(!state.session) return;
+  await saveDraft();
+  stopRest();
+  state.session = null;
+  toast('Treino salvo pra continuar depois');
+  show('workouts'); renderWorkouts();
+}
 function cancelSession(){
-  showConfirm('Cancelar treino?', 'As séries marcadas não serão salvas.', 'Cancelar treino', ()=>{
-    state.session=null; stopRest(); closeSheet(); show('detail'); renderDetail();
+  showConfirm('Descartar treino?', 'As séries deste treino em andamento serão apagadas.', 'Descartar', async()=>{
+    state.session=null; await clearDraft(); stopRest(); closeSheet(); show('workouts'); renderWorkouts();
   });
 }
 
@@ -494,7 +547,7 @@ function renderHistory(){
     html += `<div class="card tap" data-sess="${s.id}">
       <div class="row spread">
         <div style="min-width:0"><h3 style="font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.name)}</h3>
-          <div class="small muted" style="margin-top:3px">${s.entries.length} exercícios · ${s.sets||0} séries · ${vol} kg de volume</div></div>
+          <div class="small muted" style="margin-top:3px">${s.entries.length} exercícios · ${s.sets||0} séries${s.durationMs?' · '+fmtDur(s.durationMs):''} · ${vol} kg</div></div>
         <div class="muted" style="font-size:22px">›</div>
       </div></div>`;
   });
@@ -556,9 +609,13 @@ function openDayList(sess){
 }
 function openSession(id){
   const s = state.sessions.find(x=>x.id===id); if(!s) return;
+  const quando = new Date(s.date).toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'});
+  const horario = s.startedAt ? `${hhmm(s.startedAt)}${s.endedAt?' – '+hhmm(s.endedAt):''}` : new Date(s.date).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const dur = s.durationMs ? fmtDur(s.durationMs) : '';
   const body = `
     <h2>${esc(s.name)}</h2>
-    <div class="small muted" style="margin:-8px 0 16px">${new Date(s.date).toLocaleString('pt-BR')}</div>
+    <div class="small muted" style="margin:-8px 0 8px;text-transform:capitalize">${quando} · ${horario}</div>
+    ${dur?`<div class="chip accent" style="margin-bottom:14px"><i class="fa-solid fa-clock"></i> durou ${dur}</div>`:''}
     ${s.entries.map(e=>`
       <div style="margin-bottom:16px">
         <div style="font-weight:700;margin-bottom:6px">${esc(e.name)}</div>
@@ -678,7 +735,7 @@ function renderSettings(){
       <button class="btn ghost sm" id="clearWBtn" style="width:100%;margin-bottom:10px">Excluir todos os treinos</button>
       <button class="btn danger sm" id="resetBtn" style="width:100%">Apagar tudo (treinos + histórico)</button>
     </div>
-    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 28 · sincronizado na nuvem</p>`;
+    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 29 · sincronizado na nuvem</p>`;
   $('logoutBtn').onclick = ()=>{
     showConfirm('Sair da conta?','Seus dados continuam salvos na nuvem. Faça login de novo quando quiser.','Sair',async()=>{
       closeSheet(); try{ await firebase.auth().signOut(); }catch(e){}
@@ -743,9 +800,31 @@ async function resetAll(){
 /* ===================================================================
    FORMULÁRIOS (bottom sheet)
    =================================================================== */
-function openSheet(html){ $('sheet').innerHTML = html; $('overlay').classList.add('open'); }
-function closeSheet(){ $('overlay').classList.remove('open'); }
+function openSheet(html){
+  const sh=$('sheet');
+  sh.innerHTML = '<div class="sheet-grab" aria-hidden="true"></div>' + html;
+  sh.style.transform=''; sh.scrollTop=0;
+  $('overlay').classList.add('open');
+}
+function closeSheet(){ $('overlay').classList.remove('open'); $('sheet').style.transform=''; }
 $('overlay').addEventListener('click', e=>{ if(e.target.id==='overlay') closeSheet(); });
+/* deslizar a gaveta pra baixo pra fechar */
+(function bindSheetSwipe(){
+  const sh=$('sheet'); if(!sh) return;
+  let y0=0, dy=0, on=false;
+  sh.addEventListener('touchstart', e=>{ on = sh.scrollTop<=0; y0=e.touches[0].clientY; dy=0; sh.style.transition='none'; }, {passive:true});
+  sh.addEventListener('touchmove', e=>{
+    if(!on) return;
+    dy = e.touches[0].clientY - y0;
+    if(dy>0){ e.preventDefault(); sh.style.transform='translateY('+dy+'px)'; }
+    else { on=false; sh.style.transform=''; }
+  }, {passive:false});
+  sh.addEventListener('touchend', ()=>{
+    sh.style.transition='transform .2s ease';
+    if(on && dy>110){ closeSheet(); } else { sh.style.transform=''; }
+    on=false;
+  });
+})();
 
 function showConfirm(title, msg, okLabel, onOk){
   openSheet(`<h2>${esc(title)}</h2><p class="small muted" style="margin:-8px 0 18px">${esc(msg)}</p>
@@ -855,6 +934,7 @@ function renderAll(){ renderWorkouts(); renderHistory(); renderProgress(); rende
 async function loadData(){
   state.workouts = await DB.getAll('workouts');
   state.sessions = await DB.getAll('sessions');
+  try{ const d = await DB.get('drafts','active'); state.draft = (d && d.entries) ? d : null; }catch(e){ state.draft=null; }
   let inited=null; try{ inited = await DB.get('meta','init'); }catch(e){}
   if(!inited){
     if(!state.workouts.length){            // conta nova: cria o plano inicial uma única vez
@@ -967,7 +1047,7 @@ function bindStaticUI(){
     const c=e.target.closest('[data-sess]'); if(c) openSession(c.dataset.sess);
   });
   $('backBtn').onclick = ()=>{
-    if(state.view==='session'){ cancelSession(); }
+    if(state.view==='session'){ pauseSession(); }   // sai salvando como rascunho
     else { show('workouts'); renderWorkouts(); }
   };
   $('themeBtn').onclick = ()=>{

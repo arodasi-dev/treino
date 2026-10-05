@@ -186,8 +186,10 @@ nav button.active{color:var(--accent)}
   align-items:flex-end;justify-content:center}
 .overlay.open{display:flex;animation:fade .15s}
 .sheet{background:var(--surface);width:100%;max-width:560px;border-radius:20px 20px 0 0;
-  padding:20px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));
-  max-height:92vh;overflow-y:auto;animation:slideup .22s ease}
+  padding:14px 20px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));
+  max-height:80vh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  animation:slideup .22s ease;will-change:transform}
+.sheet-grab{width:44px;height:5px;border-radius:3px;background:var(--line);margin:2px auto 14px;position:sticky;top:-2px}
 @keyframes slideup{from{transform:translateY(100%)}to{transform:none}}
 .sheet h2{font-size:18px;margin-bottom:16px}
 
