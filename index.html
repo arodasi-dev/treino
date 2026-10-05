@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
 <script>
-  window.__HTMLBUILD='h5';  /* carimbo do index.html — serve pra saber se o shell atualizou no iPhone */
+  window.__HTMLBUILD='h6';  /* carimbo do index.html — serve pra saber se o shell atualizou no iPhone */
   (function(){
     var r=document.documentElement;
     function vh(){ return (window.visualViewport && window.visualViewport.height) || window.innerHeight || 0; }
@@ -88,12 +88,12 @@
 
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-/* html/body recebem a cor do FUNDO (bg): no app o menu e o header cobrem as
-   barras; essa cor só aparece na zona segura do login, onde deve ser o bg. */
-html{height:100%;margin:0;background:var(--bg);overflow:hidden}
+/* html/body recebem a cor do MENU (surface): a faixa da barrinha do home no app
+   fica da mesma cor do menu. No login, o #gate transborda com --bg por cima. */
+html{height:100%;margin:0;background:var(--surface);overflow:hidden}
 body{height:100%;margin:0;overflow:hidden}
 body{
-  font-family:var(--font); background:var(--bg); color:var(--fg);
+  font-family:var(--font); background:var(--surface); color:var(--fg);
   -webkit-font-smoothing:antialiased; font-size:16px; line-height:1.45;
   overscroll-behavior-y:none;
 }
@@ -133,15 +133,15 @@ main{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch
 /* ---- Nav ---- */
 nav{
   position:relative;
-  flex:0 0 auto; display:flex; align-items:center; background:var(--surface); border-top:1px solid var(--line);
-  padding-top:10px; padding-bottom:8px;
+  flex:0 0 auto; display:flex; align-items:flex-end; background:var(--surface); border-top:1px solid var(--line);
+  padding-top:18px; padding-bottom:6px;   /* mais espaço em cima + pouco embaixo = ícones mais pra baixo */
 }
 nav button{flex:1;background:none;border:none;color:var(--muted);
-  display:flex;align-items:center;justify-content:center;
-  padding:8px 0;margin:0 4px;border-radius:14px;
+  display:flex;align-items:flex-end;justify-content:center;
+  padding:0;margin:0 4px;border-radius:14px;
   transition:color .15s ease, transform .15s ease}
 nav button:active{transform:scale(.88)}
-nav button i{font-size:30px;line-height:1;display:flex;align-items:center;justify-content:center}
+nav button i{font-size:25px;line-height:1;display:flex;align-items:center;justify-content:center}
 nav button.active{color:var(--accent)}
 /* barrinha deslizante no topo do menu — some pra cima do ícone ativo */
 .nav-ind{position:absolute;top:0;left:-40px;width:30px;height:4px;border-radius:0 0 4px 4px;
@@ -286,7 +286,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:16px 0}
 .cal-foot{text-align:center;margin-top:14px;font-size:13px;color:var(--muted);font-weight:700}
 
 /* ---- Tela de login / status ---- */
-#gate{position:fixed;top:0;left:0;right:0;bottom:0;height:100dvh;z-index:100;background:var(--bg);display:flex;
+#gate{position:fixed;top:0;left:0;right:0;bottom:0;height:calc(100dvh + env(safe-area-inset-bottom, 0px));z-index:100;background:var(--bg);display:flex;
   flex-direction:column;align-items:center;justify-content:center;
   padding:24px;padding-top:calc(24px + env(safe-area-inset-top,0px));text-align:center}
 #gate .logo{width:72px;height:72px;border-radius:20px;margin-bottom:18px;

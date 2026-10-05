@@ -759,7 +759,7 @@ function renderSettings(){
       <button class="btn ghost sm" id="clearWBtn" style="width:100%;margin-bottom:10px">Excluir todos os treinos</button>
       <button class="btn danger sm" id="resetBtn" style="width:100%">Apagar tudo (treinos + histórico)</button>
     </div>
-    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 38 · sincronizado na nuvem</p>
+    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 39 · sincronizado na nuvem</p>
     <p class="tiny muted" id="diag" style="text-align:center;margin-top:4px;opacity:.7"></p>`;
   setTimeout(()=>{
     const d=$('diag'); if(!d) return;
