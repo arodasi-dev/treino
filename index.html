@@ -101,7 +101,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 h1,h2,h3{margin:0;text-wrap:balance;font-family:var(--font-display);letter-spacing:.01em}
 
 #app{
-  height:100%; height:var(--app-h, 100%);
+  position:fixed; top:0; right:0; bottom:0; left:0;   /* grudado nas 4 bordas: iOS preenche 100% sem calcular altura */
   display:flex; flex-direction:column;
   max-width:560px; margin:0 auto; background:transparent;
 }
@@ -281,7 +281,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:16px 0}
 .cal-foot{text-align:center;margin-top:14px;font-size:13px;color:var(--muted);font-weight:700}
 
 /* ---- Tela de login / status ---- */
-#gate{position:fixed;top:0;left:0;right:0;height:var(--app-h,100%);z-index:100;background:var(--bg);display:flex;
+#gate{position:fixed;top:0;left:0;right:0;bottom:0;z-index:100;background:var(--bg);display:flex;
   flex-direction:column;align-items:center;justify-content:center;
   padding:24px;padding-top:calc(24px + env(safe-area-inset-top,0px));text-align:center}
 #gate .logo{width:72px;height:72px;border-radius:20px;margin-bottom:18px;
