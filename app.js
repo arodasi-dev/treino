@@ -559,11 +559,10 @@ function renderHistory(){
   list.forEach(s=>{
     const d=dayKey(s.date);
     if(d!==curDay){ curDay=d; html+=`<div class="hist-date">${d}</div>`; }
-    const vol = Math.round(s.volume||0);
     html += `<div class="card tap" data-sess="${s.id}">
       <div class="row spread">
         <div style="min-width:0"><h3 style="font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.name)}</h3>
-          <div class="small muted" style="margin-top:3px">${s.entries.length} exercícios · ${s.sets||0} séries${s.durationMs?' · '+fmtDur(s.durationMs):''} · ${vol} kg</div></div>
+          <div class="small muted" style="margin-top:3px">${s.entries.length} exercícios · ${s.sets||0} séries${s.durationMs?' · '+fmtDur(s.durationMs):''}</div></div>
         <div class="muted" style="font-size:22px">›</div>
       </div></div>`;
   });
@@ -751,7 +750,19 @@ function renderSettings(){
       <button class="btn ghost sm" id="clearWBtn" style="width:100%;margin-bottom:10px">Excluir todos os treinos</button>
       <button class="btn danger sm" id="resetBtn" style="width:100%">Apagar tudo (treinos + histórico)</button>
     </div>
-    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 33 · sincronizado na nuvem</p>`;
+    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 34 · sincronizado na nuvem</p>
+    <p class="tiny muted" id="diag" style="text-align:center;margin-top:4px;opacity:.7"></p>`;
+  setTimeout(()=>{
+    const d=$('diag'); if(!d) return;
+    const probe=document.createElement('div');
+    probe.style.cssText='position:fixed;bottom:0;left:0;height:env(safe-area-inset-bottom,0px);width:0';
+    document.body.appendChild(probe);
+    const safe=Math.round(probe.getBoundingClientRect().height);
+    probe.remove();
+    const nav=document.querySelector('nav');
+    const gap=nav?Math.round(window.innerHeight-nav.getBoundingClientRect().bottom):'?';
+    d.textContent=`html ${window.__HTMLBUILD||'?'} · tela ${window.innerHeight} · menu→fundo ${gap}px · safe ${safe}px`;
+  },300);
   $('logoutBtn').onclick = ()=>{
     showConfirm('Sair da conta?','Seus dados continuam salvos na nuvem. Faça login de novo quando quiser.','Sair',async()=>{
       closeSheet(); try{ await firebase.auth().signOut(); }catch(e){}
