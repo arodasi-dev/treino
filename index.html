@@ -108,7 +108,7 @@ main{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;background:v
 nav{
   flex:0 0 auto; position:fixed; left:0; right:0; bottom:0; z-index:20;
   display:flex; background:var(--surface); border-top:1px solid var(--line);
-  padding-bottom:env(safe-area-inset-bottom,0px);
+  padding-bottom:max(6px, calc(env(safe-area-inset-bottom,0px) - 18px));
   max-width:560px; margin:0 auto;
 }
 nav button{flex:1;background:none;border:none;color:var(--muted);

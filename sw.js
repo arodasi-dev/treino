@@ -1,6 +1,6 @@
 /* Service worker — cache do app p/ funcionar offline.
    Troque a versão quando atualizar os arquivos. */
-const CACHE = 'treino-v8';
+const CACHE = 'treino-v9';
 const ASSETS = [
   './',
   './index.html',

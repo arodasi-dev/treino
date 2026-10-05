@@ -49,42 +49,42 @@ function mmss(sec){ const m=Math.floor(sec/60), s=sec%60; return String(m).padSt
 /* ---------- Dados de exemplo (primeiro uso) ---------- */
 function seed(){
   return [
-    { id:uid(), name:'Treino A — Full Body + EMOM', order:0, exercises:[
+    { id:uid(), name:'Treino A — Inferiores, Ombros e Costas + EMOM', order:0, exercises:[
       {id:uid(), name:'Agachamento livre (Back Squat)', sets:4, reps:'6-8', weight:0, rest:120, notes:'Aquecer 5min: mobilidade quadril e tornozelo'},
-      {id:uid(), name:'Supino reto com halteres', sets:4, reps:'8-10', weight:0, rest:120, notes:''},
+      {id:uid(), name:'Desenvolvimento Arnold (Arnold Press)', sets:4, reps:'8-10', weight:0, rest:120, notes:''},
       {id:uid(), name:'Remada curvada com barra', sets:4, reps:'8-10', weight:0, rest:120, notes:''},
       {id:uid(), name:'Kettlebell Swings', sets:4, reps:'15', weight:0, rest:0, notes:'EMOM 12min · minuto 1 · 4 ciclos'},
-      {id:uid(), name:'Burpees', sets:4, reps:'10-12', weight:0, rest:0, notes:'EMOM · minuto 2'},
+      {id:uid(), name:'Abdominais Borboleta (Sit-ups)', sets:4, reps:'15', weight:0, rest:0, notes:'EMOM · minuto 2'},
       {id:uid(), name:'Goblet Squats', sets:4, reps:'15', weight:0, rest:0, notes:'EMOM · minuto 3'},
     ]},
     { id:uid(), name:'Treino B — Cardio Leve + Core', order:1, exercises:[
-      {id:uid(), name:'Bicicleta ergométrica', sets:1, reps:'40-45 min', weight:0, rest:0, notes:'Ritmo contínuo'},
+      {id:uid(), name:'Bicicleta ergométrica', sets:1, reps:'40-45 min', weight:0, rest:0, notes:'Só bike · ritmo leve/passeio (sem suar muito)'},
       {id:uid(), name:'Prancha abdominal', sets:3, reps:'45-60 seg', weight:0, rest:45, notes:''},
       {id:uid(), name:'Russian Twist (anilha/halter)', sets:3, reps:'20', weight:0, rest:45, notes:''},
       {id:uid(), name:'Elevação de pernas suspensa', sets:3, reps:'12-15', weight:0, rest:45, notes:''},
     ]},
-    { id:uid(), name:'Treino C — Full Body + AMRAP', order:2, exercises:[
-      {id:uid(), name:'Levantamento terra (Deadlift)', sets:4, reps:'5-7', weight:0, rest:120, notes:'Aquecer 5min no remo seco'},
-      {id:uid(), name:'Supino inclinado com halteres', sets:4, reps:'8-10', weight:0, rest:120, notes:''},
+    { id:uid(), name:'Treino C — Inferiores, Costas e Ombros + AMRAP', order:2, exercises:[
+      {id:uid(), name:'Levantamento terra (Deadlift)', sets:4, reps:'5-7', weight:0, rest:120, notes:'Aquecer 5min: mobilidade na bike'},
       {id:uid(), name:'Puxada alta (pulley) ou barra no Graviton', sets:4, reps:'8-10', weight:0, rest:120, notes:''},
+      {id:uid(), name:'Elevação lateral com halteres', sets:4, reps:'10-12', weight:0, rest:120, notes:''},
       {id:uid(), name:'Dumbbell Snatches', sets:1, reps:'10 (5 cada braço)', weight:0, rest:0, notes:'AMRAP 10min · máx rounds'},
       {id:uid(), name:'Agachamento com salto (Jump Squats)', sets:1, reps:'15', weight:0, rest:0, notes:'AMRAP 10min'},
-      {id:uid(), name:'Flexões de braço', sets:1, reps:'10', weight:0, rest:0, notes:'AMRAP · joelhos se precisar'},
+      {id:uid(), name:'Remada curvada com halteres', sets:1, reps:'10', weight:0, rest:0, notes:'AMRAP 10min'},
     ]},
     { id:uid(), name:'Treino D — Cardio Leve + Mobilidade', order:3, exercises:[
-      {id:uid(), name:'Remo seco ou elíptico', sets:1, reps:'30 min', weight:0, rest:0, notes:''},
-      {id:uid(), name:'Mobilidade', sets:1, reps:'15 min', weight:0, rest:0, notes:'Peitoral, isquiotibiais e lombar + rolo miofascial'},
+      {id:uid(), name:'Bicicleta ergométrica', sets:1, reps:'30 min', weight:0, rest:0, notes:'Só bike · ritmo leve/passeio'},
+      {id:uid(), name:'Mobilidade', sets:1, reps:'15 min', weight:0, rest:0, notes:'Pernas, glúteos, isquiotibiais e lombar + rolo miofascial'},
     ]},
-    { id:uid(), name:'Treino E — Full Body + WOD For Time', order:4, exercises:[
-      {id:uid(), name:'Afundo com halteres ou Bulgarian Split Squat', sets:3, reps:'10 por perna', weight:0, rest:120, notes:''},
-      {id:uid(), name:'Desenvolvimento Arnold (Arnold Press)', sets:3, reps:'10-12', weight:0, rest:120, notes:''},
+    { id:uid(), name:'Treino E — Inferiores, Costas e Ombros + WOD For Time', order:4, exercises:[
+      {id:uid(), name:'Afundo com halteres ou Bulgarian Split Squat', sets:4, reps:'10 por perna', weight:0, rest:120, notes:''},
+      {id:uid(), name:'Remada serrote unilateral', sets:3, reps:'10-12 por braço', weight:0, rest:90, notes:''},
       {id:uid(), name:'Crucifixo invertido (máquina/halteres)', sets:3, reps:'12', weight:0, rest:90, notes:''},
       {id:uid(), name:'Thrusters com halteres', sets:1, reps:'21-15-9', weight:0, rest:0, notes:'WOD "For Time" (o mais rápido)'},
       {id:uid(), name:'Remada TRX ou puxada no pulley', sets:1, reps:'21-15-9', weight:0, rest:0, notes:'WOD "For Time"'},
     ]},
     { id:uid(), name:'Treino F — Cardio Leve + Skill', order:5, exercises:[
-      {id:uid(), name:'Bicicleta ergométrica', sets:1, reps:'30-40 min', weight:0, rest:0, notes:''},
-      {id:uid(), name:'Skill (técnica)', sets:1, reps:'15 min', weight:0, rest:0, notes:'L-sit, Toes to Bar, Double Unders'},
+      {id:uid(), name:'Bicicleta ergométrica', sets:1, reps:'30-40 min', weight:0, rest:0, notes:'Só bike · ritmo leve/passeio'},
+      {id:uid(), name:'Skill (técnica)', sets:1, reps:'15 min', weight:0, rest:0, notes:'Educativos para core e sustentação'},
     ]},
   ];
 }
@@ -634,7 +634,8 @@ function renderSettings(){
     <div class="sec-head"><h2>Dados</h2></div>
     <div class="card">
       <p class="small muted" style="margin:0 0 12px">${state.workouts.length} treinos · ${state.sessions.length} registros no histórico.</p>
-      <button class="btn danger sm" id="resetBtn" style="width:100%">Apagar tudo</button>
+      <button class="btn ghost sm" id="clearWBtn" style="width:100%;margin-bottom:10px">Excluir todos os treinos</button>
+      <button class="btn danger sm" id="resetBtn" style="width:100%">Apagar tudo (treinos + histórico)</button>
     </div>
     <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · sincronizado na nuvem com Firebase</p>`;
   $('logoutBtn').onclick = ()=>{
@@ -645,6 +646,7 @@ function renderSettings(){
   $('expBtn').onclick = exportBackup;
   $('impBtn').onclick = ()=>$('impFile').click();
   $('impFile').onchange = importBackup;
+  $('clearWBtn').onclick = ()=>showConfirm('Excluir todos os treinos?','Apaga só os treinos — o histórico continua salvo. Vale pra todos os aparelhos.','Excluir treinos',clearWorkouts);
   $('resetBtn').onclick = ()=>showConfirm('Apagar tudo?','Todos os treinos e histórico serão apagados da nuvem (todos os aparelhos).','Apagar tudo',resetAll);
   const rm=$('restModeSel'); rm.value = localStorage.getItem('restMode')||'app';
   $('shortcutNameField').hidden = rm.value!=='native';
@@ -687,6 +689,10 @@ function importBackup(e){
     e.target.value='';
   };
   r.readAsText(file);
+}
+async function clearWorkouts(){
+  await DB.clear('workouts');
+  state.workouts=[]; closeSheet(); renderAll(); toast('Treinos excluídos');
 }
 async function resetAll(){
   await DB.clear('workouts'); await DB.clear('sessions');
@@ -808,9 +814,13 @@ function renderAll(){ renderWorkouts(); renderHistory(); renderProgress(); rende
 async function loadData(){
   state.workouts = await DB.getAll('workouts');
   state.sessions = await DB.getAll('sessions');
-  if(!state.workouts.length){            // primeiro acesso: cria treinos de exemplo
-    state.workouts = seed();
-    for(const w of state.workouts) await DB.put('workouts', w);
+  let inited=null; try{ inited = await DB.get('meta','init'); }catch(e){}
+  if(!inited){
+    if(!state.workouts.length){            // conta nova: cria o plano inicial uma única vez
+      state.workouts = seed();
+      for(const w of state.workouts) await DB.put('workouts', w);
+    }
+    try{ await DB.put('meta', {id:'init', done:true}); }catch(e){}  // marca como inicializada: não recria depois
   }
 }
 
@@ -835,36 +845,45 @@ function showAccessDenied(email){
 let authMode = 'login';
 function showLogin(){
   const isLogin = authMode === 'login';
+  let last=''; try{ last = localStorage.getItem('lastEmail')||''; }catch(e){}
+  const quick = isLogin && !!last;   // login rápido: já tem conta lembrada
   showGate(`
     <div class="logo"><i class="fa-solid fa-dumbbell"></i></div>
     <h1>Meu Treino</h1>
-    <p class="sub">${isLogin?'Entre pra ver seus treinos em qualquer aparelho':'Crie sua conta — leva 10 segundos'}</p>
+    <p class="sub">${quick?'Bem-vinda de volta!':(isLogin?'Entre pra ver seus treinos em qualquer aparelho':'Crie sua conta — leva 10 segundos')}</p>
     <form id="authForm" novalidate>
-      <div class="field"><label>E-mail</label>
-        <input id="authEmail" type="email" autocomplete="email" inputmode="email" required></div>
+      <div class="field"${quick?' hidden':''}><label>E-mail</label>
+        <input id="authEmail" type="email" autocomplete="username" inputmode="email" value="${esc(last)}" required></div>
+      ${quick?`<div class="small muted" style="text-align:center;margin:-4px 0 14px">Entrar como <b style="color:var(--fg)">${esc(last)}</b></div>`:''}
       <div class="field"><label>Senha ${isLogin?'':'(mín. 6 caracteres)'}</label>
         <input id="authPass" type="password" autocomplete="${isLogin?'current-password':'new-password'}" required></div>
+      ${isLogin?'':`<div class="field"><label>Confirmar senha</label>
+        <input id="authPass2" type="password" autocomplete="new-password" required></div>`}
       <div class="msg" id="authMsg"></div>
       <button class="btn primary" type="submit" id="authBtn">${isLogin?'Entrar':'Criar conta'}</button>
-      <div class="switch">${isLogin?'Não tem conta?':'Já tem conta?'}
-        <button type="button" class="link" id="authSwitch">${isLogin?'Criar agora':'Entrar'}</button></div>
+      <div class="switch">${quick
+        ? '<button type="button" class="link" id="authOther">Usar outra conta</button>'
+        : `${isLogin?'Não tem conta?':'Já tem conta?'} <button type="button" class="link" id="authSwitch">${isLogin?'Criar agora':'Entrar'}</button>`}</div>
     </form>`);
-  $('authSwitch').onclick = ()=>{ authMode = isLogin?'signup':'login'; showLogin(); };
+  const sw=$('authSwitch'); if(sw) sw.onclick = ()=>{ authMode = isLogin?'signup':'login'; showLogin(); };
+  const other=$('authOther'); if(other) other.onclick = ()=>{ try{localStorage.removeItem('lastEmail');}catch(e){} authMode='login'; showLogin(); };
   $('authForm').onsubmit = async e=>{
     e.preventDefault();
     const email = $('authEmail').value.trim().toLowerCase(), pass = $('authPass').value;
     if(!email || pass.length < 6){ authMsg('err','Preencha e-mail e senha (mín. 6).'); return; }
+    if(!isLogin && pass !== $('authPass2').value){ authMsg('err','As senhas não são iguais.'); return; }
     $('authBtn').disabled = true; $('authBtn').textContent = 'Aguarde…';
     try{
-      if(authMode==='login') await firebase.auth().signInWithEmailAndPassword(email, pass);
+      if(isLogin) await firebase.auth().signInWithEmailAndPassword(email, pass);
       else await firebase.auth().createUserWithEmailAndPassword(email, pass);
+      try{ localStorage.setItem('lastEmail', email); }catch(e){}
       // onAuthStateChanged assume daqui
     }catch(err){
       $('authBtn').disabled = false; $('authBtn').textContent = isLogin?'Entrar':'Criar conta';
       authMsg('err', authErrMsg(err));
     }
   };
-  setTimeout(()=>{ const i=$('authEmail'); if(i) i.focus(); }, 120);
+  setTimeout(()=>{ const f = quick ? $('authPass') : $('authEmail'); if(f) f.focus(); }, 120);
 }
 function authMsg(cls, text){ const el=$('authMsg'); if(el){ el.className='msg '+cls; el.textContent=text; } }
 function authErrMsg(err){
@@ -941,6 +960,7 @@ async function boot(){
     if(user){
       DB.setUser(user.uid);
       state.currentUser = user;
+      try{ if(user.email) localStorage.setItem('lastEmail', user.email); }catch(e){}
       showGate('<div class="spin">Sincronizando seus treinos…</div>');
       try{
         await loadData();
