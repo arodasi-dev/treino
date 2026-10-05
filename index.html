@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
 <script>
-  window.__HTMLBUILD='h6';  /* carimbo do index.html — serve pra saber se o shell atualizou no iPhone */
+  window.__HTMLBUILD='h8';  /* carimbo do index.html — serve pra saber se o shell atualizou no iPhone */
   (function(){
     var r=document.documentElement;
     function vh(){ return (window.visualViewport && window.visualViewport.height) || window.innerHeight || 0; }
@@ -50,6 +50,7 @@
    Paleta divertida: creme + roxo vibrante (acento) + periwinkle + oliva (feito). */
 :root{
   --bg:#F4FAFF; --surface:#DEE7E7; --surface-2:#CEDADA;
+  --gate-bg:#F4FAFF;   /* fundo do login — independente do app */
   --fg:#535657; --muted:#4F646F; --line:#C7D2D2;
   --accent:#B7ADCF; --accent-fg:#3A3647; --accent-soft:#E7E3F0;
   --accent2:#8F82B4; --accent2-fg:#FFFFFF; --accent2-soft:#E7E3F0;
@@ -66,6 +67,7 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#535657; --surface:#4F646F; --surface-2:#455862;
+    --gate-bg:#3F4142;   /* fundo do login (escuro) — mais escuro que o menu pra destacar */
     --fg:#F4FAFF; --muted:#DEE7E7; --line:#5E7681;
     --accent:#B7ADCF; --accent-fg:#3A3647; --accent-soft:#5B5568;
     --accent2:#C9BFE3; --accent2-fg:#3A3647; --accent2-soft:#5B5568;
@@ -77,6 +79,7 @@
 }
 :root[data-theme="dark"]{
   --bg:#535657; --surface:#4F646F; --surface-2:#455862;
+  --gate-bg:#3F4142;
   --fg:#F4FAFF; --muted:#DEE7E7; --line:#5E7681;
   --accent:#B7ADCF; --accent-fg:#3A3647; --accent-soft:#5B5568;
   --accent2:#C9BFE3; --accent2-fg:#3A3647; --accent2-soft:#5B5568;
@@ -90,13 +93,17 @@
 [hidden]{display:none!important}
 /* html/body recebem a cor do MENU (surface): a faixa da barrinha do home no app
    fica da mesma cor do menu. No login, o #gate transborda com --bg por cima. */
-html{height:100%;margin:0;background:var(--surface);overflow:hidden}
-body{height:100%;margin:0;overflow:hidden}
+html{height:100%;margin:0;background:var(--surface);overflow:hidden;overscroll-behavior:none}
+body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none;position:fixed;inset:0;width:100%}
 body{
   font-family:var(--font); background:var(--surface); color:var(--fg);
   -webkit-font-smoothing:antialiased; font-size:16px; line-height:1.45;
   overscroll-behavior-y:none;
+  touch-action:manipulation;              /* mata o double-tap-zoom do iOS (que travava a tela) */
+  -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;  /* sem lupa/seleção no toque duplo */
 }
+input,textarea,select,[contenteditable]{ -webkit-user-select:text; user-select:text; }
+main,nav,header,.view,button,.card,.seg,a,.sheet{touch-action:manipulation}
 button{font-family:inherit;font-size:inherit;cursor:pointer}
 input,select,textarea{font-family:inherit;font-size:16px}
 h1,h2,h3{margin:0;text-wrap:balance;font-family:var(--font-display);letter-spacing:.01em}
@@ -124,7 +131,7 @@ header .back{background:none;border:none;color:var(--accent);font-weight:600;
   border-radius:50%;display:grid;place-items:center;font-size:18px}
 
 /* ---- Content ---- */
-main{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background:var(--bg);
+main{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none;background:var(--bg);
   padding:16px; padding-bottom:88px}
 .view{display:none;animation:fade .18s ease}
 .view.active{display:block}
@@ -286,7 +293,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:16px 0}
 .cal-foot{text-align:center;margin-top:14px;font-size:13px;color:var(--muted);font-weight:700}
 
 /* ---- Tela de login / status ---- */
-#gate{position:fixed;top:0;left:0;right:0;bottom:0;height:calc(100dvh + env(safe-area-inset-bottom, 0px));z-index:100;background:var(--bg);display:flex;
+#gate{position:fixed;top:0;left:0;right:0;bottom:0;height:calc(100dvh + env(safe-area-inset-bottom, 0px));z-index:100;background:var(--gate-bg);display:flex;
   flex-direction:column;align-items:center;justify-content:center;
   padding:24px;padding-top:calc(24px + env(safe-area-inset-top,0px));text-align:center}
 #gate .logo{width:72px;height:72px;border-radius:20px;margin-bottom:18px;

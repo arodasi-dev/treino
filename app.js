@@ -545,8 +545,8 @@ function renderHistory(){
   const el = $('view-history');
   const list = [...state.sessions].sort((a,b)=>b.date-a.date);
   const toggle = `<div class="seg">
-    <button class="${histView==='lista'?'on':''}" data-hv="lista"><i class="fa-solid fa-list"></i> Lista</button>
-    <button class="${histView==='calendario'?'on':''}" data-hv="calendario"><i class="fa-solid fa-calendar"></i> Calendário</button>
+    <button class="${histView==='lista'?'on':''}" data-hv="lista">Lista</button>
+    <button class="${histView==='calendario'?'on':''}" data-hv="calendario">Calendário</button>
   </div>`;
   const bindToggle = ()=> el.querySelectorAll('[data-hv]').forEach(b=>b.onclick=()=>{
     histView=b.dataset.hv; try{localStorage.setItem('histView',histView);}catch(e){} renderHistory();
@@ -759,26 +759,7 @@ function renderSettings(){
       <button class="btn ghost sm" id="clearWBtn" style="width:100%;margin-bottom:10px">Excluir todos os treinos</button>
       <button class="btn danger sm" id="resetBtn" style="width:100%">Apagar tudo (treinos + histórico)</button>
     </div>
-    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 39 · sincronizado na nuvem</p>
-    <p class="tiny muted" id="diag" style="text-align:center;margin-top:4px;opacity:.7"></p>`;
-  setTimeout(()=>{
-    const d=$('diag'); if(!d) return;
-    const probe=document.createElement('div');
-    probe.style.cssText='position:fixed;bottom:0;left:0;height:env(safe-area-inset-bottom,0px);width:0';
-    document.body.appendChild(probe);
-    const safe=Math.round(probe.getBoundingClientRect().height);
-    probe.remove();
-    const dvhProbe=document.createElement('div');
-    dvhProbe.style.cssText='position:fixed;top:0;left:0;height:100dvh;width:0';
-    document.body.appendChild(dvhProbe);
-    const dvh=Math.round(dvhProbe.getBoundingClientRect().height);
-    dvhProbe.remove();
-    const app=document.getElementById('app');
-    const appH=app?Math.round(app.getBoundingClientRect().height):'?';
-    const nav=document.querySelector('nav');
-    const navB=nav?Math.round(nav.getBoundingClientRect().bottom):'?';
-    d.textContent=`html ${window.__HTMLBUILD||'?'} · tela ${window.innerHeight}/${dvh} · app ${appH} · navB ${navB} · safe ${safe}px`;
-  },300);
+    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 41 · sincronizado na nuvem</p>`;
   $('logoutBtn').onclick = ()=>{
     showConfirm('Sair da conta?','Seus dados continuam salvos na nuvem. Faça login de novo quando quiser.','Sair',async()=>{
       closeSheet(); try{ await firebase.auth().signOut(); }catch(e){}
