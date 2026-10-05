@@ -750,7 +750,7 @@ function renderSettings(){
       <button class="btn ghost sm" id="clearWBtn" style="width:100%;margin-bottom:10px">Excluir todos os treinos</button>
       <button class="btn danger sm" id="resetBtn" style="width:100%">Apagar tudo (treinos + histórico)</button>
     </div>
-    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 35 · sincronizado na nuvem</p>
+    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 36 · sincronizado na nuvem</p>
     <p class="tiny muted" id="diag" style="text-align:center;margin-top:4px;opacity:.7"></p>`;
   setTimeout(()=>{
     const d=$('diag'); if(!d) return;
@@ -764,9 +764,11 @@ function renderSettings(){
     document.body.appendChild(dvhProbe);
     const dvh=Math.round(dvhProbe.getBoundingClientRect().height);
     dvhProbe.remove();
+    const app=document.getElementById('app');
+    const appH=app?Math.round(app.getBoundingClientRect().height):'?';
     const nav=document.querySelector('nav');
-    const gap=nav?Math.round(dvh-nav.getBoundingClientRect().bottom):'?';
-    d.textContent=`html ${window.__HTMLBUILD||'?'} · tela ${window.innerHeight}/${dvh} · menu→fundo ${gap}px · safe ${safe}px`;
+    const navB=nav?Math.round(nav.getBoundingClientRect().bottom):'?';
+    d.textContent=`html ${window.__HTMLBUILD||'?'} · tela ${window.innerHeight}/${dvh} · app ${appH} · navB ${navB} · safe ${safe}px`;
   },300);
   $('logoutBtn').onclick = ()=>{
     showConfirm('Sair da conta?','Seus dados continuam salvos na nuvem. Faça login de novo quando quiser.','Sair',async()=>{
