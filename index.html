@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
 <script>
-  window.__HTMLBUILD='h10';  /* carimbo do index.html — serve pra saber se o shell atualizou no iPhone */
+  window.__HTMLBUILD='h11';  /* carimbo do index.html — serve pra saber se o shell atualizou no iPhone */
   (function(){
     var r=document.documentElement;
     function vh(){ return (window.visualViewport && window.visualViewport.height) || window.innerHeight || 0; }
@@ -110,6 +110,7 @@
 /* html/body recebem a cor do MENU (surface): a faixa da barrinha do home no app
    fica da mesma cor do menu. No login, o #gate transborda com --bg por cima. */
 html{height:100%;margin:0;background:var(--surface);overflow:hidden;overscroll-behavior:none}
+html.on-gate{background:var(--gate-bg)}   /* no login, a faixa não-coberta fica da cor do login (não azul) */
 body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none;position:fixed;inset:0;width:100%}
 body{
   font-family:var(--font); background:var(--surface); color:var(--fg);

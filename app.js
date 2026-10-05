@@ -759,7 +759,7 @@ function renderSettings(){
       <button class="btn ghost sm" id="clearWBtn" style="width:100%;margin-bottom:10px">Excluir todos os treinos</button>
       <button class="btn danger sm" id="resetBtn" style="width:100%">Apagar tudo (treinos + histórico)</button>
     </div>
-    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 43 · sincronizado na nuvem</p>`;
+    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 44 · sincronizado na nuvem</p>`;
   $('logoutBtn').onclick = ()=>{
     showConfirm('Sair da conta?','Seus dados continuam salvos na nuvem. Faça login de novo quando quiser.','Sair',async()=>{
       closeSheet(); try{ await firebase.auth().signOut(); }catch(e){}
@@ -970,8 +970,8 @@ async function loadData(){
 }
 
 /* ---------- Telas de abertura (gate) ---------- */
-function showGate(html){ $('gate').innerHTML = html; $('gate').hidden = false; $('app').hidden = true; }
-function enterApp(){ $('gate').hidden = true; $('app').hidden = false; requestAnimationFrame(()=>{ moveNavInd(); setTimeout(moveNavInd, 250); }); }
+function showGate(html){ $('gate').innerHTML = html; $('gate').hidden = false; $('app').hidden = true; document.documentElement.classList.add('on-gate'); }
+function enterApp(){ $('gate').hidden = true; $('app').hidden = false; document.documentElement.classList.remove('on-gate'); requestAnimationFrame(()=>{ moveNavInd(); setTimeout(moveNavInd, 250); }); }
 
 function showConfigError(){
   showGate(`<div class="logo"><i class="fa-solid fa-triangle-exclamation"></i></div>
