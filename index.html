@@ -21,6 +21,18 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
+<script>
+  (function(){
+    function setH(){ try{ document.documentElement.style.setProperty('--app-h', window.innerHeight + 'px'); }catch(e){} }
+    setH();
+    addEventListener('resize', setH);
+    addEventListener('orientationchange', function(){ setTimeout(setH, 250); });
+    addEventListener('pageshow', setH);
+    document.addEventListener('visibilitychange', function(){ if(!document.hidden) setH(); });
+    addEventListener('load', function(){ setH(); setTimeout(setH, 300); });
+  })();
+</script>
+
 <style>
 /* ============ Design tokens ============
    Layout: app full-screen, header fixo em cima, nav fixa embaixo, conteúdo rola no meio.
@@ -34,7 +46,7 @@
   --danger:#C85A6B; --danger-soft:#F3E0E3;
   --radius:20px; --radius-sm:14px;
   --shadow:none;
-  --header-h:56px; --nav-h:56px;
+  --header-h:56px; --nav-h:64px;
   --nav-pad:max(10px, calc(env(safe-area-inset-bottom,0px) - 18px));
   --font:'Rubik', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-display:'Rubik', -apple-system, system-ui, sans-serif;
@@ -80,7 +92,7 @@ h1,h2,h3{margin:0;text-wrap:balance;font-family:var(--font-display);letter-spaci
 
 #app{
   display:flex; flex-direction:column;
-  height:100vh; height:100dvh;
+  height:100vh; height:100dvh; height:var(--app-h, 100dvh);
   max-width:560px; margin:0 auto; background:transparent;
 }
 
