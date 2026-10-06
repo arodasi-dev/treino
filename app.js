@@ -198,8 +198,9 @@ function renderDetail(){
         <div class="body" data-editex="${ex.id}">
           <div class="name">${esc(ex.name)}</div>
           <div class="tag-row">
-            <span class="chip">${ex.sets}×${esc(ex.reps)}</span>
-            <span class="chip accent">${ex.weight||0} kg</span>
+            ${ex.mode==='tempo'
+              ? `<span class="chip accent"><i class="fa-solid fa-clock"></i> ${ex.sets>1?ex.sets+'× ':''}${esc(ex.reps)} min</span>`
+              : `<span class="chip">${ex.sets}×${esc(ex.reps)}</span><span class="chip accent">${ex.weight||0} kg</span>`}
             <span class="chip"><i class="fa-solid fa-stopwatch"></i> ${ex.rest}s</span>
             ${ex.notes?`<span class="chip"><i class="fa-solid fa-note-sticky"></i> ${esc(ex.notes)}</span>`:''}
           </div>
@@ -250,11 +251,12 @@ function startSession(wid){
     id: uid(), workoutId: w.id, name: w.name, date: Date.now(), startedAt: Date.now(),
     entries: w.exercises.map(ex=>{
       const old = prev && prev.entries.find(e=>e.exerciseId===ex.id);
+      const tempo = ex.mode==='tempo';
       return {
-        exerciseId: ex.id, name: ex.name, reps: ex.reps, rest: ex.rest,
+        exerciseId: ex.id, name: ex.name, reps: ex.reps, rest: ex.rest, mode: ex.mode||'reps',
         sets: Array.from({length: ex.sets}, (_,i)=>({
-          weight: old && old.sets[i]? old.sets[i].weight : (ex.weight||0),
-          reps: old && old.sets[i]? old.sets[i].reps : '',
+          weight: tempo ? 0 : (old && old.sets[i]? old.sets[i].weight : (ex.weight||0)),
+          reps: old && old.sets[i]? old.sets[i].reps : (tempo ? (ex.reps||'') : ''),
           done: false
         }))
       };
@@ -312,15 +314,20 @@ function renderSession(){
     ${s.entries.map((e,ei)=>`
       <div class="card">
         <h3 style="font-size:16px;margin-bottom:2px">${esc(e.name)}</h3>
-        <div class="tiny muted" style="margin-bottom:10px">Meta: ${esc(e.reps)} reps · descanso ${e.rest}s</div>
-        <div class="col-head"><span>Kg</span><span>Reps</span><span class="sp"></span></div>
+        <div class="tiny muted" style="margin-bottom:10px">Meta: ${esc(e.reps)}${e.mode==='tempo'?' min':' reps'} · descanso ${e.rest}s</div>
+        ${e.mode==='tempo'
+          ? `<div class="col-head"><span>Minutos</span><span class="sp"></span></div>`
+          : `<div class="col-head"><span>Kg</span><span>Reps</span><span class="sp"></span></div>`}
         ${e.sets.map((st,si)=>`
           <div class="set-wrap" data-ei="${ei}" data-si="${si}">
             <button class="set-del" data-del aria-label="remover série"><i class="fa-solid fa-trash"></i></button>
             <div class="set-line ${st.done?'done':''}" data-ei="${ei}" data-si="${si}">
               <span class="set-no">${si+1}</span>
-              <input type="number" inputmode="decimal" min="0" step="any" placeholder="kg" value="${st.weight??''}" data-f="weight" onfocus="if(this.value==='0')this.value='';this.select()">
-              <input type="number" inputmode="numeric" min="0" step="1" placeholder="reps" value="${st.reps??''}" data-f="reps" onfocus="if(this.value==='0')this.value='';this.select()">
+              ${e.mode==='tempo'
+                ? `<input type="number" inputmode="numeric" min="0" step="any" placeholder="min" value="${st.reps??''}" data-f="reps" onfocus="if(this.value==='0')this.value='';this.select()">
+                   <span class="u">min</span>`
+                : `<input type="number" inputmode="decimal" min="0" step="any" placeholder="kg" value="${st.weight??''}" data-f="weight" onfocus="if(this.value==='0')this.value='';this.select()">
+                   <input type="number" inputmode="numeric" min="0" step="1" placeholder="reps" value="${st.reps??''}" data-f="reps" onfocus="if(this.value==='0')this.value='';this.select()">`}
               <button class="chk ${st.done?'on':''}" data-chk aria-label="feito"><i class="fa-solid fa-check"></i></button>
             </div>
           </div>`).join('')}
@@ -644,7 +651,9 @@ function openSession(id){
       <div style="margin-bottom:16px">
         <div style="font-weight:700;margin-bottom:6px">${esc(e.name)}</div>
         ${e.sets.map((st,i)=>`<div class="small" style="padding:3px 0;border-bottom:1px solid var(--line)">
-          <span class="muted">Série ${i+1}:</span> <b>${st.weight||0} kg</b> × ${st.reps||'-'} reps</div>`).join('')}
+          <span class="muted">Série ${i+1}:</span> ${e.mode==='tempo'
+            ? `<b>${st.reps||'-'} min</b>`
+            : `<b>${st.weight||0} kg</b> × ${st.reps||'-'} reps`}</div>`).join('')}
       </div>`).join('')}
     <div class="btn-stack" style="margin-top:8px">
       <button class="btn danger sm" style="width:100%" id="delSess">Excluir este registro</button>
@@ -759,7 +768,7 @@ function renderSettings(){
       <button class="btn ghost sm" id="clearWBtn" style="width:100%;margin-bottom:10px">Excluir todos os treinos</button>
       <button class="btn danger sm" id="resetBtn" style="width:100%">Apagar tudo (treinos + histórico)</button>
     </div>
-    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 46 · sincronizado na nuvem</p>`;
+    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 47 · sincronizado na nuvem</p>`;
   $('logoutBtn').onclick = ()=>{
     showConfirm('Sair da conta?','Seus dados continuam salvos na nuvem. Faça login de novo quando quiser.','Sair',async()=>{
       closeSheet(); try{ await firebase.auth().signOut(); }catch(e){}
@@ -892,17 +901,25 @@ function confirmDelWorkout(w){
 function editExercise(wid, exid){
   const w = state.workouts.find(x=>x.id===wid);
   const ex = exid ? w.exercises.find(e=>e.id===exid) : null;
+  const isTempo = ex ? ex.mode==='tempo' : false;
   openSheet(`<h2>${ex?'Editar exercício':'Novo exercício'}</h2>
     <div class="field"><label>Nome</label>
       <input id="eName" placeholder="Ex: Supino reto" value="${ex?esc(ex.name):''}"></div>
+    <div class="field"><label>Tipo</label>
+      <div class="seg" id="eMode">
+        <button type="button" data-m="reps" class="${isTempo?'':'on'}">Séries × reps</button>
+        <button type="button" data-m="tempo" class="${isTempo?'on':''}">Tempo</button>
+      </div></div>
     <div class="grid2">
       <div class="field"><label>Séries</label>
         <input id="eSets" type="number" inputmode="numeric" min="1" step="1" value="${ex?ex.sets:3}"></div>
-      <div class="field"><label>Repetições</label>
-        <input id="eReps" placeholder="8-12" value="${ex?esc(ex.reps):'10-12'}"></div>
+      <div class="field" id="fReps"><label>Repetições</label>
+        <input id="eReps" placeholder="8-12" value="${ex&&!isTempo?esc(ex.reps):'10-12'}"></div>
+      <div class="field" id="fTime"><label>Tempo (min)</label>
+        <input id="eTime" type="number" inputmode="numeric" min="0" step="1" placeholder="40" value="${ex&&isTempo?esc(ex.reps):''}"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label>Peso (kg)</label>
+      <div class="field" id="fWeight"><label>Peso (kg)</label>
         <input id="eWeight" type="number" inputmode="decimal" min="0" step="any" value="${ex?ex.weight:0}" onfocus="if(this.value==='0')this.value='';this.select()"></div>
       <div class="field"><label>Descanso (s)</label>
         <input id="eRest" type="number" inputmode="numeric" min="0" step="5" value="${ex?ex.rest:60}" onfocus="if(this.value==='0')this.value='';this.select()"></div>
@@ -913,14 +930,26 @@ function editExercise(wid, exid){
       <button class="btn primary" id="saveE">Salvar</button>
       ${ex?'<button class="btn danger" id="delE">Excluir exercício</button>':''}
     </div>`);
+  let curMode = isTempo ? 'tempo' : 'reps';
+  function applyMode(){
+    const t = curMode==='tempo';
+    $('fReps').hidden = t; $('fWeight').hidden = t; $('fTime').hidden = !t;
+    $('eMode').querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.m===curMode));
+  }
+  $('eMode').querySelectorAll('button').forEach(b=>{
+    b.onclick = ()=>{ curMode = b.dataset.m; applyMode(); };
+  });
+  applyMode();
   setTimeout(()=>$('eName').focus(), 100);
   $('saveE').onclick = async()=>{
     const name=$('eName').value.trim(); if(!name){ toast('Dê um nome'); return; }
+    const tempo = curMode==='tempo';
     const data = {
       name,
+      mode: tempo ? 'tempo' : 'reps',
       sets: Math.max(1, parseInt($('eSets').value)||1),
-      reps: $('eReps').value.trim()||'-',
-      weight: Math.max(0, parseFloat($('eWeight').value)||0),
+      reps: tempo ? (String(parseInt($('eTime').value)||0)) : ($('eReps').value.trim()||'-'),
+      weight: tempo ? 0 : Math.max(0, parseFloat($('eWeight').value)||0),
       rest: Math.max(0, parseInt($('eRest').value)||0),
       notes: $('eNotes').value.trim()
     };
