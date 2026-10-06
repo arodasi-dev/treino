@@ -3,7 +3,7 @@
    - Arquivos do app (mesmo domínio): NETWORK-FIRST → sempre pega a versão nova
      quando tem internet; se estiver offline, usa o cache.
    - CDNs (Firebase, fontes, Font Awesome): cache-first (mais rápido). */
-const CACHE = 'treino-v44';
+const CACHE = 'treino-v46';
 const ASSETS = [
   './',
   './index.html',
