@@ -206,29 +206,34 @@ function renderDetail(){
           </div>
         </div>
       </div>`;
-  if(!w.exercises.length){
+  const setBlock = (g)=>{
+    const exs = w.exercises.filter(e=>e.group===g.id);
+    return `<div class="set-detail" data-grp="${g.id}">
+      <div class="set-detail-h">
+        <span><i class="fa-solid fa-repeat"></i> ${esc(g.name||'Set')} · ${g.rounds||1}×  <span class="tiny muted">· descanso ${g.rest}s</span></span>
+        <button class="link small" data-editgrp="${g.id}">editar</button>
+      </div>
+      ${exs.length ? exs.map(e=>exRow(e,false)).join('') : `<p class="muted small" style="padding:4px 2px">Set vazio — adicione exercícios.</p>`}
+      <button class="link small" data-addexset="${g.id}" style="display:block;margin:8px 2px 2px">+ exercício no set</button>
+    </div>`;
+  };
+  const hasAnything = w.exercises.length || (w.groups && w.groups.length);
+  if(!hasAnything){
     listEl.innerHTML = `<p class="muted small" style="padding:8px 2px">Nenhum exercício. Toque em “+ Exercício” ou “Set”.</p>`;
   } else {
-    // itens: exercícios soltos + blocos de Set (agrupa consecutivos)
     let htmlOut=''; const emitted=new Set();
     orderedExercises(w).forEach(ex=>{
       if(ex.group){
         if(emitted.has(ex.group)) return;
         emitted.add(ex.group);
         const g = groupOf(w, ex.group) || {id:ex.group, rounds:1, rest:60, name:''};
-        const exs = w.exercises.filter(e=>e.group===ex.group);
-        htmlOut += `<div class="set-detail" data-grp="${g.id}">
-          <div class="set-detail-h">
-            <span><i class="fa-solid fa-repeat"></i> ${esc(g.name||'Set')} · ${g.rounds||1}×  <span class="tiny muted">· descanso ${g.rest}s</span></span>
-            <button class="link small" data-editgrp="${g.id}">editar</button>
-          </div>
-          ${exs.map(e=>exRow(e,false)).join('')}
-          <button class="link small" data-addexset="${g.id}" style="display:block;margin:8px 2px 2px">+ exercício no set</button>
-        </div>`;
+        htmlOut += setBlock(g);
       } else {
         htmlOut += exRow(ex, true);
       }
     });
+    // Sets ainda sem exercícios (recém-criados)
+    (w.groups||[]).forEach(g=>{ if(!emitted.has(g.id)){ emitted.add(g.id); htmlOut += setBlock(g); } });
     listEl.innerHTML = htmlOut;
     if(!(w.groups && w.groups.length)) enableDragSort(listEl, w);
   }
@@ -873,7 +878,7 @@ function renderSettings(){
       <button class="btn ghost sm" id="clearWBtn" style="width:100%;margin-bottom:10px">Excluir todos os treinos</button>
       <button class="btn danger sm" id="resetBtn" style="width:100%">Apagar tudo (treinos + histórico)</button>
     </div>
-    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 49 · sincronizado na nuvem</p>`;
+    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 50 · sincronizado na nuvem</p>`;
   $('logoutBtn').onclick = ()=>{
     showConfirm('Sair da conta?','Seus dados continuam salvos na nuvem. Faça login de novo quando quiser.','Sair',async()=>{
       closeSheet(); try{ await firebase.auth().signOut(); }catch(e){}
