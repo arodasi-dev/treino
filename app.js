@@ -181,7 +181,10 @@ function renderDetail(){
     </div>
     <div class="sec-head">
       <h2>Exercícios (${w.exercises.length})</h2>
-      <button class="btn ghost sm" id="addExBtn">+ Exercício</button>
+      <div class="row" style="gap:8px">
+        <button class="btn ghost sm" id="addSetBtn"><i class="fa-solid fa-repeat"></i> Set</button>
+        <button class="btn ghost sm" id="addExBtn">+ Exercício</button>
+      </div>
     </div>
     <div id="exList"></div>
     <div class="btn-stack" style="margin-top:20px">
@@ -189,31 +192,59 @@ function renderDetail(){
       <button class="btn danger sm" id="delWBtn" style="width:100%">Excluir treino</button>
     </div>`;
   const listEl = $('exList');
-  if(!w.exercises.length){
-    listEl.innerHTML = `<p class="muted small" style="padding:8px 2px">Nenhum exercício. Toque em “+ Exercício”.</p>`;
-  } else {
-    listEl.innerHTML = w.exercises.map((ex,i)=>`
-      <div class="ex" draggable="true" data-i="${i}" data-ex="${ex.id}">
+  const exRow = (ex, drag)=>`
+      <div class="ex${drag?'':' nodrag'}" ${drag?'draggable="true"':''} data-ex="${ex.id}">
         <span class="grip">≡</span>
         <div class="body" data-editex="${ex.id}">
           <div class="name">${esc(ex.name)}</div>
           <div class="tag-row">
             ${ex.mode==='tempo'
-              ? `<span class="chip accent"><i class="fa-solid fa-clock"></i> ${ex.sets>1?ex.sets+'× ':''}${esc(ex.reps)} min</span>`
-              : `<span class="chip">${ex.sets}×${esc(ex.reps)}</span><span class="chip accent">${ex.weight||0} kg</span>`}
-            <span class="chip"><i class="fa-solid fa-stopwatch"></i> ${ex.rest}s</span>
+              ? `<span class="chip accent"><i class="fa-solid fa-clock"></i> ${esc(ex.reps)} min</span>`
+              : `<span class="chip">${ex.group?'':ex.sets+'×'}${esc(ex.reps)}</span>${ex.weight?`<span class="chip accent">${ex.weight} kg</span>`:''}`}
+            ${ex.group?'':`<span class="chip"><i class="fa-solid fa-stopwatch"></i> ${ex.rest}s</span>`}
             ${ex.notes?`<span class="chip"><i class="fa-solid fa-note-sticky"></i> ${esc(ex.notes)}</span>`:''}
           </div>
         </div>
-      </div>`).join('');
-    enableDragSort(listEl, w);
+      </div>`;
+  if(!w.exercises.length){
+    listEl.innerHTML = `<p class="muted small" style="padding:8px 2px">Nenhum exercício. Toque em “+ Exercício” ou “Set”.</p>`;
+  } else {
+    // itens: exercícios soltos + blocos de Set (agrupa consecutivos)
+    let htmlOut=''; const emitted=new Set();
+    orderedExercises(w).forEach(ex=>{
+      if(ex.group){
+        if(emitted.has(ex.group)) return;
+        emitted.add(ex.group);
+        const g = groupOf(w, ex.group) || {id:ex.group, rounds:1, rest:60, name:''};
+        const exs = w.exercises.filter(e=>e.group===ex.group);
+        htmlOut += `<div class="set-detail" data-grp="${g.id}">
+          <div class="set-detail-h">
+            <span><i class="fa-solid fa-repeat"></i> ${esc(g.name||'Set')} · ${g.rounds||1}×  <span class="tiny muted">· descanso ${g.rest}s</span></span>
+            <button class="link small" data-editgrp="${g.id}">editar</button>
+          </div>
+          ${exs.map(e=>exRow(e,false)).join('')}
+          <button class="link small" data-addexset="${g.id}" style="display:block;margin:8px 2px 2px">+ exercício no set</button>
+        </div>`;
+      } else {
+        htmlOut += exRow(ex, true);
+      }
+    });
+    listEl.innerHTML = htmlOut;
+    if(!(w.groups && w.groups.length)) enableDragSort(listEl, w);
   }
   $('startBtn').onclick = ()=>startSession(w.id);
   $('addExBtn').onclick = ()=>editExercise(w.id, null);
+  $('addSetBtn').onclick = ()=>editSet(w.id, null);
   $('editWBtn').onclick = ()=>editWorkout(w.id);
   $('delWBtn').onclick = ()=>confirmDelWorkout(w);
   listEl.querySelectorAll('[data-editex]').forEach(n=>{
     n.onclick = ()=>editExercise(w.id, n.dataset.editex);
+  });
+  listEl.querySelectorAll('[data-editgrp]').forEach(n=>{
+    n.onclick = ()=>editSet(w.id, n.dataset.editgrp);
+  });
+  listEl.querySelectorAll('[data-addexset]').forEach(n=>{
+    n.onclick = ()=>editExercise(w.id, null, n.dataset.addexset);
   });
 }
 
@@ -243,18 +274,36 @@ function enableDragSort(container, w){
 /* ===================================================================
    TELA: SESSÃO ATIVA (marcar séries + cronômetro)
    =================================================================== */
+/* exercícios na ordem certa: os de um mesmo Set ficam juntos (consecutivos) */
+function orderedExercises(w){
+  const out=[]; const seen=new Set();
+  (w.exercises||[]).forEach(ex=>{
+    if(ex.group){
+      if(seen.has(ex.group)) return;
+      seen.add(ex.group);
+      w.exercises.filter(e=>e.group===ex.group).forEach(e=>out.push(e));
+    } else out.push(ex);
+  });
+  return out;
+}
+function groupOf(w, gid){ return (w.groups||[]).find(g=>g.id===gid); }
+
 function startSession(wid){
   const w = state.workouts.find(x=>x.id===wid); if(!w) return;
   // pré-preenche com últimos pesos usados, se houver histórico
   const prev = lastSessionOf(wid);
   state.session = {
     id: uid(), workoutId: w.id, name: w.name, date: Date.now(), startedAt: Date.now(),
-    entries: w.exercises.map(ex=>{
+    entries: orderedExercises(w).map(ex=>{
       const old = prev && prev.entries.find(e=>e.exerciseId===ex.id);
       const tempo = ex.mode==='tempo';
+      const grp = ex.group ? groupOf(w, ex.group) : null;
+      const nSets = grp ? (grp.rounds||1) : ex.sets;
+      const rest = grp ? grp.rest : ex.rest;
       return {
-        exerciseId: ex.id, name: ex.name, reps: ex.reps, rest: ex.rest, mode: ex.mode||'reps',
-        sets: Array.from({length: ex.sets}, (_,i)=>({
+        exerciseId: ex.id, name: ex.name, reps: ex.reps, rest, mode: ex.mode||'reps',
+        group: ex.group||null, groupName: grp?(grp.name||''):'', groupRounds: grp?(grp.rounds||1):0,
+        sets: Array.from({length: nSets}, (_,i)=>({
           weight: tempo ? 0 : (old && old.sets[i]? old.sets[i].weight : (ex.weight||0)),
           reps: old && old.sets[i]? old.sets[i].reps : (tempo ? (ex.reps||'') : ''),
           done: false
@@ -297,6 +346,86 @@ async function loadDraft(){
   state.draft = null;
 }
 
+/* inputs de uma série (kg/reps ou minutos) */
+function setInputs(e, st){
+  return e.mode==='tempo'
+    ? `<input type="number" inputmode="numeric" min="0" step="any" placeholder="min" value="${st.reps??''}" data-f="reps" onfocus="if(this.value==='0')this.value='';this.select()"><span class="u">min</span>`
+    : `<input type="number" inputmode="decimal" min="0" step="any" placeholder="kg" value="${st.weight??''}" data-f="weight" onfocus="if(this.value==='0')this.value='';this.select()"><input type="number" inputmode="numeric" min="0" step="1" placeholder="reps" value="${st.reps??''}" data-f="reps" onfocus="if(this.value==='0')this.value='';this.select()">`;
+}
+/* card de um exercício solto */
+function renderExerciseCard(e, ei){
+  return `
+    <div class="card">
+      <h3 style="font-size:16px;margin-bottom:2px">${esc(e.name)}</h3>
+      <div class="tiny muted" style="margin-bottom:10px">Meta: ${esc(e.reps)}${e.mode==='tempo'?' min':' reps'} · descanso ${e.rest}s</div>
+      ${e.mode==='tempo'
+        ? `<div class="col-head"><span>Minutos</span><span class="sp"></span></div>`
+        : `<div class="col-head"><span>Kg</span><span>Reps</span><span class="sp"></span></div>`}
+      ${e.sets.map((st,si)=>`
+        <div class="set-wrap" data-ei="${ei}" data-si="${si}">
+          <button class="set-del" data-del aria-label="remover série"><i class="fa-solid fa-trash"></i></button>
+          <div class="set-line ${st.done?'done':''}" data-ei="${ei}" data-si="${si}">
+            <span class="set-no">${si+1}</span>
+            ${setInputs(e, st)}
+            <button class="chk ${st.done?'on':''}" data-chk aria-label="feito"><i class="fa-solid fa-check"></i></button>
+          </div>
+        </div>`).join('')}
+      <div class="row" style="gap:12px;margin-top:12px;align-items:center">
+        <button class="btn sm" data-rest="${ei}" style="background:var(--accent2-soft);color:var(--accent2)"><i class="fa-solid fa-stopwatch"></i> Descansar ${e.rest}s</button>
+        <button class="link small" data-addset="${ei}">+ série</button>
+      </div>
+    </div>`;
+}
+/* bloco de um Set (vários exercícios repetidos em voltas) */
+function renderSetBlock(members){
+  const first = members[0].e;
+  const rounds = first.sets.length;
+  const restEi = members[0].ei;
+  const rest = first.rest;
+  const title = first.groupName ? esc(first.groupName) : 'Set';
+  let rows='';
+  for(let r=0;r<rounds;r++){
+    let exRows='';
+    members.forEach(({e,ei})=>{
+      const st=e.sets[r];
+      exRows += `
+        <div class="set-line in-set ${st.done?'done':''}" data-ei="${ei}" data-si="${r}">
+          <span class="ex-name">${esc(e.name)}</span>
+          ${setInputs(e, st)}
+          <button class="chk ${st.done?'on':''}" data-chk aria-label="feito"><i class="fa-solid fa-check"></i></button>
+        </div>`;
+    });
+    rows += `
+      <div class="set-round">
+        <div class="set-round-h">Set ${r+1}</div>
+        ${exRows}
+        ${r<rounds-1 ? `<button class="btn sm" data-rest="${restEi}" style="background:var(--accent2-soft);color:var(--accent2);margin-top:8px"><i class="fa-solid fa-stopwatch"></i> Descansar ${rest}s</button>` : ''}
+      </div>`;
+  }
+  return `
+    <div class="card set-block">
+      <div class="row spread" style="margin-bottom:2px">
+        <h3 style="font-size:16px;display:flex;align-items:center;gap:7px"><i class="fa-solid fa-repeat" style="color:var(--accent2)"></i> ${title}</h3>
+        <span class="chip accent">${rounds}×</span>
+      </div>
+      <div class="tiny muted" style="margin-bottom:10px">Faz em sequência · descansa ${rest}s · repete</div>
+      ${rows}
+    </div>`;
+}
+/* monta os cards da sessão, agrupando os Sets */
+function sessionEntriesHtml(entries){
+  let html=''; let i=0;
+  while(i<entries.length){
+    const e=entries[i];
+    if(e.group){
+      const gid=e.group; const members=[]; let j=i;
+      while(j<entries.length && entries[j].group===gid){ members.push({e:entries[j], ei:j}); j++; }
+      html += renderSetBlock(members); i=j;
+    } else { html += renderExerciseCard(e, i); i++; }
+  }
+  return html;
+}
+
 function renderSession(){
   const s = state.session; if(!s){ show('workouts'); return; }
   const el = $('view-session');
@@ -311,31 +440,7 @@ function renderSession(){
           <div class="tiny muted">séries</div></div>
       </div>
     </div>
-    ${s.entries.map((e,ei)=>`
-      <div class="card">
-        <h3 style="font-size:16px;margin-bottom:2px">${esc(e.name)}</h3>
-        <div class="tiny muted" style="margin-bottom:10px">Meta: ${esc(e.reps)}${e.mode==='tempo'?' min':' reps'} · descanso ${e.rest}s</div>
-        ${e.mode==='tempo'
-          ? `<div class="col-head"><span>Minutos</span><span class="sp"></span></div>`
-          : `<div class="col-head"><span>Kg</span><span>Reps</span><span class="sp"></span></div>`}
-        ${e.sets.map((st,si)=>`
-          <div class="set-wrap" data-ei="${ei}" data-si="${si}">
-            <button class="set-del" data-del aria-label="remover série"><i class="fa-solid fa-trash"></i></button>
-            <div class="set-line ${st.done?'done':''}" data-ei="${ei}" data-si="${si}">
-              <span class="set-no">${si+1}</span>
-              ${e.mode==='tempo'
-                ? `<input type="number" inputmode="numeric" min="0" step="any" placeholder="min" value="${st.reps??''}" data-f="reps" onfocus="if(this.value==='0')this.value='';this.select()">
-                   <span class="u">min</span>`
-                : `<input type="number" inputmode="decimal" min="0" step="any" placeholder="kg" value="${st.weight??''}" data-f="weight" onfocus="if(this.value==='0')this.value='';this.select()">
-                   <input type="number" inputmode="numeric" min="0" step="1" placeholder="reps" value="${st.reps??''}" data-f="reps" onfocus="if(this.value==='0')this.value='';this.select()">`}
-              <button class="chk ${st.done?'on':''}" data-chk aria-label="feito"><i class="fa-solid fa-check"></i></button>
-            </div>
-          </div>`).join('')}
-        <div class="row" style="gap:12px;margin-top:12px;align-items:center">
-          <button class="btn sm" data-rest="${ei}" style="background:var(--accent2-soft);color:var(--accent2)"><i class="fa-solid fa-stopwatch"></i> Descansar ${e.rest}s</button>
-          <button class="link small" data-addset="${ei}">+ série</button>
-        </div>
-      </div>`).join('')}
+    ${sessionEntriesHtml(s.entries)}
     <div class="tiny muted" style="text-align:center;margin:10px 0 2px"><i class="fa-solid fa-cloud"></i> Salvo automaticamente — pode fechar e voltar quando quiser</div>
     <div class="btn-stack" style="margin-top:6px">
       <button class="btn ok" id="finishBtn"><i class="fa-solid fa-flag-checkered"></i>  Finalizar treino</button>
@@ -768,7 +873,7 @@ function renderSettings(){
       <button class="btn ghost sm" id="clearWBtn" style="width:100%;margin-bottom:10px">Excluir todos os treinos</button>
       <button class="btn danger sm" id="resetBtn" style="width:100%">Apagar tudo (treinos + histórico)</button>
     </div>
-    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 48 · sincronizado na nuvem</p>`;
+    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 49 · sincronizado na nuvem</p>`;
   $('logoutBtn').onclick = ()=>{
     showConfirm('Sair da conta?','Seus dados continuam salvos na nuvem. Faça login de novo quando quiser.','Sair',async()=>{
       closeSheet(); try{ await firebase.auth().signOut(); }catch(e){}
@@ -898,11 +1003,12 @@ function confirmDelWorkout(w){
   });
 }
 
-function editExercise(wid, exid){
+function editExercise(wid, exid, groupId){
   const w = state.workouts.find(x=>x.id===wid);
   const ex = exid ? w.exercises.find(e=>e.id===exid) : null;
   const isTempo = ex ? ex.mode==='tempo' : false;
-  openSheet(`<h2>${ex?'Editar exercício':'Novo exercício'}</h2>
+  const inSet = !!(groupId || (ex && ex.group));   // dentro de um Set? então séries/descanso vêm do Set
+  openSheet(`<h2>${ex?'Editar exercício':'Novo exercício'}${inSet?' <span class="tiny muted">(no Set)</span>':''}</h2>
     <div class="field"><label>Nome</label>
       <input id="eName" placeholder="Ex: Supino reto" value="${ex?esc(ex.name):''}"></div>
     <div class="field"><label>Tipo</label>
@@ -911,7 +1017,7 @@ function editExercise(wid, exid){
         <button type="button" data-m="tempo" class="${isTempo?'on':''}">Tempo</button>
       </div></div>
     <div class="grid2">
-      <div class="field"><label>Séries</label>
+      <div class="field" id="fSets"><label>Séries</label>
         <input id="eSets" type="number" inputmode="numeric" min="1" step="1" value="${ex?ex.sets:3}"></div>
       <div class="field" id="fReps"><label>Repetições</label>
         <input id="eReps" placeholder="8-12" value="${ex&&!isTempo?esc(ex.reps):'10-12'}"></div>
@@ -921,7 +1027,7 @@ function editExercise(wid, exid){
     <div class="grid2">
       <div class="field" id="fWeight"><label>Peso (kg)</label>
         <input id="eWeight" type="number" inputmode="decimal" min="0" step="any" value="${ex?ex.weight:0}" onfocus="if(this.value==='0')this.value='';this.select()"></div>
-      <div class="field"><label>Descanso (s)</label>
+      <div class="field" id="fRest"><label>Descanso (s)</label>
         <input id="eRest" type="number" inputmode="numeric" min="0" step="5" value="${ex?ex.rest:60}" onfocus="if(this.value==='0')this.value='';this.select()"></div>
     </div>
     <div class="field"><label>Observação (opcional)</label>
@@ -934,6 +1040,7 @@ function editExercise(wid, exid){
   function applyMode(){
     const t = curMode==='tempo';
     $('fReps').hidden = t; $('fWeight').hidden = t; $('fTime').hidden = !t;
+    if(inSet){ $('fSets').hidden = true; $('fRest').hidden = true; }  // Set controla séries/descanso
     $('eMode').querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.m===curMode));
   }
   $('eMode').querySelectorAll('button').forEach(b=>{
@@ -944,14 +1051,16 @@ function editExercise(wid, exid){
   $('saveE').onclick = async()=>{
     const name=$('eName').value.trim(); if(!name){ toast('Dê um nome'); return; }
     const tempo = curMode==='tempo';
+    const grp = groupId || (ex && ex.group) || null;
     const data = {
       name,
       mode: tempo ? 'tempo' : 'reps',
-      sets: Math.max(1, parseInt($('eSets').value)||1),
+      sets: inSet ? 1 : Math.max(1, parseInt($('eSets').value)||1),
       reps: tempo ? (String(parseInt($('eTime').value)||0)) : ($('eReps').value.trim()||'-'),
       weight: tempo ? 0 : Math.max(0, parseFloat($('eWeight').value)||0),
-      rest: Math.max(0, parseInt($('eRest').value)||0),
-      notes: $('eNotes').value.trim()
+      rest: inSet ? 0 : Math.max(0, parseInt($('eRest').value)||0),
+      notes: $('eNotes').value.trim(),
+      group: grp
     };
     if(ex) Object.assign(ex, data);
     else w.exercises.push({ id:uid(), ...data });
@@ -962,6 +1071,48 @@ function editExercise(wid, exid){
     w.exercises = w.exercises.filter(e=>e.id!==exid);
     await DB.put('workouts', JSON.parse(JSON.stringify(w)));
     closeSheet(); renderDetail();
+  };
+}
+
+/* criar / editar um Set (grupo de exercícios repetido em voltas) */
+function editSet(wid, gid){
+  const w = state.workouts.find(x=>x.id===wid);
+  if(!w.groups) w.groups = [];
+  const g = gid ? w.groups.find(x=>x.id===gid) : null;
+  openSheet(`<h2>${g?'Editar Set':'Novo Set'}</h2>
+    <p class="small muted" style="margin:-8px 0 16px">Faz os exercícios em sequência, descansa e repete.</p>
+    <div class="field"><label>Nome (opcional)</label>
+      <input id="gName" placeholder="Ex: Set A" value="${g?esc(g.name||''):''}"></div>
+    <div class="grid2">
+      <div class="field"><label>Voltas (vezes)</label>
+        <input id="gRounds" type="number" inputmode="numeric" min="1" step="1" value="${g?g.rounds:3}"></div>
+      <div class="field"><label>Descanso entre voltas (s)</label>
+        <input id="gRest" type="number" inputmode="numeric" min="0" step="5" value="${g?g.rest:90}" onfocus="if(this.value==='0')this.value='';this.select()"></div>
+    </div>
+    <div class="btn-stack">
+      <button class="btn primary" id="saveG">Salvar</button>
+      ${g?'<button class="btn danger" id="delG">Excluir Set (e seus exercícios)</button>':''}
+    </div>`);
+  setTimeout(()=>$('gName').focus(), 100);
+  $('saveG').onclick = async()=>{
+    const data = {
+      name: $('gName').value.trim(),
+      rounds: Math.max(1, parseInt($('gRounds').value)||1),
+      rest: Math.max(0, parseInt($('gRest').value)||0)
+    };
+    if(g){ Object.assign(g, data); }
+    else { const ng = { id:uid(), ...data }; w.groups.push(ng); }
+    await DB.put('workouts', JSON.parse(JSON.stringify(w)));
+    closeSheet(); renderDetail();
+    if(!g){ toast('Set criado — agora adicione exercícios nele'); }
+  };
+  if(g) $('delG').onclick = ()=>{
+    showConfirm('Excluir Set?', 'O Set e os exercícios dentro dele serão removidos.', 'Excluir', async()=>{
+      w.exercises = w.exercises.filter(e=>e.group!==gid);
+      w.groups = w.groups.filter(x=>x.id!==gid);
+      await DB.put('workouts', JSON.parse(JSON.stringify(w)));
+      closeSheet(); renderDetail();
+    });
   };
 }
 

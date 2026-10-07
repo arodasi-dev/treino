@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
 <script>
-  window.__HTMLBUILD='h15';  /* carimbo do index.html — serve pra saber se o shell atualizou no iPhone */
+  window.__HTMLBUILD='h16';  /* carimbo do index.html — serve pra saber se o shell atualizou no iPhone */
   (function(){
     var r=document.documentElement;
     function vh(){ return (window.visualViewport && window.visualViewport.height) || window.innerHeight || 0; }
@@ -213,6 +213,14 @@ nav button.active{color:var(--accent)}
 .ex .name{font-weight:700}
 .ex.drag{opacity:.4}
 .ex.over{border-color:var(--accent)}
+.ex.nodrag{margin-bottom:8px}
+.ex.nodrag .grip{display:none}
+/* bloco de Set no detalhe do treino */
+.set-detail{border:1.5px solid var(--accent);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px}
+.set-detail-h{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  font-weight:700;font-size:14px;margin-bottom:10px}
+.set-detail-h i{color:var(--accent2);margin-right:4px}
+.set-detail .ex{background:var(--surface-2);margin-bottom:8px}
 
 /* ---- Forms / modal ---- */
 .field{margin-bottom:14px}
@@ -253,6 +261,14 @@ nav button.active{color:var(--accent)}
   text-transform:uppercase;letter-spacing:.04em}
 .col-head span{flex:1;text-align:center}
 .col-head .sp{width:38px;flex:0 0 auto}
+/* ---- Set (circuito) ---- */
+.set-block{border:1.5px solid var(--accent)}
+.set-round{background:var(--surface-2);border-radius:12px;padding:10px 12px;margin-bottom:9px}
+.set-round-h{font-size:12px;font-weight:700;color:var(--accent2);margin-bottom:4px;letter-spacing:.03em}
+.set-line.in-set{padding:6px 0}
+.set-line.in-set .ex-name{flex:1 1 auto;min-width:0;font-size:14px;color:var(--fg);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.set-line.in-set input{max-width:58px;text-align:center}
 
 /* ---- Rest timer bar ---- */
 #rest{position:fixed;left:12px;right:12px;bottom:calc(var(--nav-h) + var(--nav-pad) + 18px);
