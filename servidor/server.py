@@ -34,6 +34,8 @@ BACKUP_KEEP = int(os.environ.get("BACKUP_KEEP", "14"))
 COL_RE = re.compile(r"^[a-z_]{1,32}$")
 ID_RE = re.compile(r"^[A-Za-z0-9_.-]{1,128}$")
 MAX_BODY = 5_000_000
+STATIC_DIR = os.environ.get("STATIC_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+STATIC_RE = re.compile(r"^(index\.html|app\.js|sw\.js|manifest\.webmanifest|icon-\d+\.png|apple-touch-icon\.png)$")
 
 if len(TOKEN) < 16:
     sys.exit("Defina TREINO_TOKEN com pelo menos 16 caracteres.")
@@ -124,10 +126,32 @@ class H(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self._send(204)
 
+    def _static(self, p):
+        """Serve o próprio app (só arquivos da lista; nunca o .env nem a pasta de dados)."""
+        name = "index.html" if p in ([""], []) else (p[0] if len(p) == 1 else "")
+        if not STATIC_RE.match(name):
+            return False
+        path = os.path.join(STATIC_DIR, name)
+        if not os.path.isfile(path):
+            return False
+        with open(path, "rb") as f:
+            body = f.read()
+        ctype = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
+                 ".webmanifest": "application/manifest+json", ".png": "image/png"}[os.path.splitext(name)[1]]
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-cache")
+        self.end_headers()
+        self.wfile.write(body)
+        return True
+
     def do_GET(self):
         p = self._route()
         if p == ["health"]:
             return self._send(200, {"ok": True})
+        if self._static(p):
+            return
         if not self._auth():
             return
         if p == ["api", "export"]:

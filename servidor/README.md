@@ -28,7 +28,22 @@ Um só usuário, protegido por token. O app (GitHub Pages) conversa com ele pelo
 
    Endereço final: `https://homelab.tail69a525.ts.net:8447`
 
-## Migrar os dados do Firestore
+## Abrir o app pelo próprio servidor
+
+O servidor também entrega o app (só `index.html`, `app.js`, `sw.js`, o manifesto e os ícones):
+
+- No iPhone/PC, com o Tailscale ligado, abra `https://homelab.tail69a525.ts.net:8447/`.
+- Na primeira vez ele pede o token (o endereço já vem preenchido).
+- No iPhone: **Compartilhar → Adicionar à Tela de Início** para instalar. Depois da 1ª visita ele
+  funciona offline e sincroniza quando o servidor voltar.
+
+Assim o app novo roda separado do que está no GitHub Pages, sem mexer na `main`.
+
+## Trazer os dados atuais
+
+**Sem senha:** no app antigo, **Ajustes → Exportar backup**; no app novo, **Ajustes → Importar backup**.
+
+## Migrar os dados do Firestore (alternativa, precisa do e-mail e da senha do app)
 
 Rode **no próprio servidor** (não precisa de navegador nem de Tailscale no seu aparelho):
 

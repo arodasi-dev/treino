@@ -1273,7 +1273,9 @@ function showGate(html){ $('gate').innerHTML = html; $('gate').hidden = false; $
 function enterApp(){ $('gate').hidden = true; $('app').hidden = false; document.documentElement.classList.remove('on-gate'); requestAnimationFrame(()=>{ moveNavInd(); setTimeout(moveNavInd, 250); }); }
 
 /* ---------- Tela de conexão com o servidor ---------- */
-const DEFAULT_SERVER = 'https://homelab.tail69a525.ts.net:8447';
+// aberto pelo próprio homeserver, o servidor é a mesma origem; no GitHub Pages, o endereço padrão
+const DEFAULT_SERVER = /^https?:$/.test(location.protocol) && !/github\.io$/.test(location.hostname)
+  ? location.origin : 'https://homelab.tail69a525.ts.net:8447';
 function showServerSetup(msg){
   let url = ''; try{ url = (JSON.parse(localStorage.getItem('treino.server')||'{}').url) || ''; }catch(e){}
   showGate(`

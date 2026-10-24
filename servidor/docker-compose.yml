@@ -11,3 +11,4 @@ services:
       - "127.0.0.1:${HOST_PORT:-8787}:8787"
     volumes:
       - ./dados:/data
+      - ..:/site:ro        # os arquivos do app (só uma lista fixa é servida)
