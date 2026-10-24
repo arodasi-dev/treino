@@ -3,6 +3,8 @@ services:
     build: .
     container_name: treino-api
     restart: unless-stopped
+    labels:
+      farm.group: db       # a Fazenda Homelab mostra este container em "Bancos de dados"
     environment:
       TREINO_TOKEN: ${TREINO_TOKEN:?defina TREINO_TOKEN no arquivo .env}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://arodasi-dev.github.io}
