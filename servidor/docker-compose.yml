@@ -8,6 +8,6 @@ services:
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://arodasi-dev.github.io}
     ports:
       # Só o próprio servidor alcança a porta; a tailnet chega via `tailscale serve`.
-      - "127.0.0.1:8787:8787"
+      - "127.0.0.1:${HOST_PORT:-8787}:8787"
     volumes:
       - ./dados:/data

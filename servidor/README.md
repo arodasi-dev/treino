@@ -23,7 +23,7 @@ Um só usuário, protegido por token. O app (GitHub Pages) conversa com ele pelo
 4. Publique na tailnet com HTTPS (confira com `tailscale serve status` que a porta 8447 está livre):
 
    ```bash
-   sudo tailscale serve --bg --https=8447 http://127.0.0.1:8787
+   sudo tailscale serve --bg --https=8447 http://127.0.0.1:8795
    ```
 
    Endereço final: `https://homelab.tail69a525.ts.net:8447`
