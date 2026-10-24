@@ -3,28 +3,132 @@
    Dados salvos localmente no aparelho via IndexedDB (funciona offline).
    =================================================================== */
 
-/* ---------- Banco de dados: Firebase Firestore ----------
-   Mesma interface de antes (getAll/get/put/del/clear), mas agora
-   os dados ficam na nuvem e sincronizam entre aparelhos.
-   O Firestore mantém um cache local, então também funciona OFFLINE:
-   as gravações entram na fila e sobem sozinhas quando a internet volta.
-   Cada usuário só acessa os próprios dados: users/{uid}/{coleção}. */
+/* ---------- Banco de dados: API no homeserver (SQLite) ----------
+   Mesma interface de antes (getAll/get/put/del/clear). Os dados ficam no seu
+   servidor (pasta `servidor/`), alcançado pelo Tailscale.
+   Funciona OFFLINE: cada coleção é guardada num cache local (IndexedDB) e as
+   gravações entram numa fila que sobe sozinha quando o servidor volta. */
 const DB = (() => {
-  let uid = null;
-  const fs  = () => firebase.firestore();
-  const col = name => fs().collection('users').doc(uid).collection(name);
+  const CFG_KEY = 'treino.server';
+  let cfg = {};
+  try{ cfg = JSON.parse(localStorage.getItem(CFG_KEY) || '{}') || {}; }catch(e){}
+  let live = false;           // o último contato com o servidor deu certo?
+  let cache = {};             // { coleção: { id: doc } }
+  let outbox = [];            // [{m:'PUT'|'DEL'|'CLR', col, id, doc}]
+  let flushing = false, ready = null;
+  const listeners = [];
+  const notify = () => listeners.forEach(f => { try{ f(); }catch(e){} });
+
+  /* --- IndexedDB mínimo (chave → valor) --- */
+  const idb = () => new Promise((ok, fail) => {
+    const r = indexedDB.open('treino-cache', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => ok(r.result);
+    r.onerror = () => fail(r.error);
+  });
+  async function kvGet(k){ const d = await idb(); return new Promise((ok, fail) => { const q = d.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => ok(q.result); q.onerror = () => fail(q.error); }); }
+  async function kvSet(k, v){ const d = await idb(); return new Promise((ok, fail) => { const t = d.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = () => ok(); t.onerror = () => fail(t.error); }); }
+  const persist = () => Promise.all([kvSet('cache', cache), kvSet('outbox', outbox)]).catch(e => console.error('cache local', e));
+  function load(){
+    if(!ready) ready = (async () => {
+      try{ cache = (await kvGet('cache')) || {}; outbox = (await kvGet('outbox')) || []; }catch(e){ cache = {}; outbox = []; }
+    })();
+    return ready;
+  }
+
+  /* --- HTTP --- */
+  async function api(method, path, body){
+    if(!cfg.url || !cfg.token) throw Object.assign(new Error('sem servidor'), {fatal:true});
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 10000);
+    try{
+      const r = await fetch(cfg.url.replace(/\/+$/, '') + path, {
+        method, signal: ctl.signal,
+        headers: { 'Authorization': 'Bearer ' + cfg.token, 'Content-Type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      live = true;
+      if(r.status === 404) return { notFound: true };
+      if(!r.ok) throw Object.assign(new Error('HTTP ' + r.status), { status: r.status });
+      return await r.json();
+    }catch(e){
+      if(!e.status) live = false;      // falha de rede / tempo esgotado
+      throw e;
+    }finally{ clearTimeout(t); notify(); }
+  }
+
+  /* --- fila de gravações --- */
+  async function flush(){
+    await load();
+    if(flushing || !outbox.length || !cfg.url) return;
+    flushing = true; notify();
+    try{
+      while(outbox.length){
+        const op = outbox[0], base = '/api/c/' + encodeURIComponent(op.col);
+        try{
+          if(op.m === 'PUT') await api('PUT', base + '/' + encodeURIComponent(op.id), op.doc);
+          else if(op.m === 'DEL') await api('DELETE', base + '/' + encodeURIComponent(op.id));
+          else await api('DELETE', base);
+        }catch(e){
+          if(e.status && e.status !== 401 && e.status !== 429 && e.status < 500){ console.error('operação descartada', op, e); }
+          else break;                   // sem rede / servidor fora / 401: tenta de novo depois
+        }
+        outbox.shift(); await persist();
+      }
+    }finally{ flushing = false; notify(); }
+  }
+  function enqueue(op){
+    // junta gravações repetidas do mesmo documento (ex.: rascunho salvo a cada 600 ms)
+    if(op.m === 'PUT'){
+      const from = flushing ? 1 : 0;
+      for(let i = outbox.length - 1; i >= from; i--) if(outbox[i].m === 'PUT' && outbox[i].col === op.col && outbox[i].id === op.id) outbox.splice(i, 1);
+    }
+    outbox.push(op);
+  }
+  const pending = (col) => outbox.filter(o => o.col === col);
+
+  addEventListener('online', flush);
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') flush(); });
+  setInterval(flush, 20000);
+
   return {
-    setUser(u){ uid = u; },
-    async getAll(s){ const snap = await col(s).get(); return snap.docs.map(d => d.data()); },
-    async get(s, id){ const d = await col(s).doc(id).get(); return d.exists ? d.data() : undefined; },
-    async put(s, v){ await col(s).doc(v.id).set(v); },
-    async del(s, id){ await col(s).doc(id).delete(); },
-    async clear(s){
-      const snap = await col(s).get();
-      const batch = fs().batch();
-      snap.docs.forEach(d => batch.delete(d.ref));
-      await batch.commit();
+    configured: () => !!(cfg.url && cfg.token),
+    host: () => { try{ return new URL(cfg.url).host; }catch(e){ return cfg.url || ''; } },
+    configure(url, token){ cfg = { url: String(url||'').trim().replace(/\/+$/, ''), token: String(token||'').trim() }; localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); },
+    clearConfig(){ cfg = {}; localStorage.removeItem(CFG_KEY); live = false; notify(); },
+    async test(){ await api('GET', '/api/c/meta'); },
+    live: () => live,
+    pendingCount: () => outbox.length,
+    onChange(f){ listeners[0] = f; },
+    flush,
+    async getAll(s){
+      await load();
+      try{
+        const list = await api('GET', '/api/c/' + encodeURIComponent(s));
+        const map = {}; list.forEach(d => { map[d.id] = d; });
+        for(const op of pending(s)){            // aplica por cima o que ainda não subiu
+          if(op.m === 'PUT') map[op.id] = op.doc;
+          else if(op.m === 'DEL') delete map[op.id];
+          else for(const k in map) delete map[k];
+        }
+        cache[s] = map; persist();
+      }catch(e){ if(e.fatal) throw e; }
+      return Object.values(cache[s] || {});
     },
+    async get(s, id){
+      await load();
+      if(!pending(s).some(o => o.id === id || o.m === 'CLR')){
+        try{
+          const d = await api('GET', '/api/c/' + encodeURIComponent(s) + '/' + encodeURIComponent(id));
+          cache[s] = cache[s] || {};
+          if(d.notFound) delete cache[s][id]; else cache[s][id] = d;
+          persist();
+        }catch(e){ if(e.fatal) throw e; }
+      }
+      return (cache[s] || {})[id];
+    },
+    async put(s, v){ await load(); cache[s] = cache[s] || {}; cache[s][v.id] = v; enqueue({ m:'PUT', col:s, id:v.id, doc:v }); await persist(); flush(); },
+    async del(s, id){ await load(); if(cache[s]) delete cache[s][id]; enqueue({ m:'DEL', col:s, id }); await persist(); flush(); },
+    async clear(s){ await load(); cache[s] = {}; outbox = outbox.filter(o => o.col !== s); enqueue({ m:'CLR', col:s }); await persist(); flush(); },
   };
 })();
 
@@ -825,20 +929,21 @@ function renderSettings(){
   const el = $('view-settings');
   const online = navigator.onLine;
   el.innerHTML = `
-    <div class="sec-head"><h2>Conta</h2></div>
+    <div class="sec-head"><h2>Servidor</h2></div>
     <div class="card">
-      <div class="small muted">Conectada como</div>
-      <div style="font-weight:700;margin:2px 0 10px;overflow:hidden;text-overflow:ellipsis">${esc(state.currentUser?state.currentUser.email:'—')}</div>
+      <div class="small muted">Conectado ao homeserver</div>
+      <div style="font-weight:700;margin:2px 0 10px;overflow:hidden;text-overflow:ellipsis">${esc(DB.host()||'—')}</div>
       <div class="row small" style="gap:6px">
-        <span style="color:${online?'var(--ok)':'var(--muted)'};font-size:10px">●</span>
-        <span class="muted">${online?'Sincronizado com a nuvem <i class="fa-solid fa-cloud"></i>':'Offline — vai sincronizar quando voltar a internet'}</span>
+        <span id="srvDot" style="color:var(--muted);font-size:10px">●</span>
+        <span class="muted" id="srvTxt">…</span>
       </div>
-      <button class="btn ghost sm" id="logoutBtn" style="width:100%;margin-top:14px">Sair desta conta</button>
+      <button class="btn ghost sm" id="syncBtn" style="width:100%;margin-top:14px">Sincronizar agora</button>
+      <button class="btn ghost sm" id="logoutBtn" style="width:100%;margin-top:8px">Trocar servidor</button>
     </div>
 
     <div class="sec-head"><h2>Backup manual</h2></div>
     <div class="card">
-      <p class="small muted" style="margin:0 0 12px">Seus dados já ficam salvos na nuvem. Se quiser, exporte também um arquivo de segurança no seu aparelho.</p>
+      <p class="small muted" style="margin:0 0 12px">Seus dados já ficam salvos no seu servidor. Se quiser, exporte também um arquivo de segurança no seu aparelho.</p>
       <div class="btn-stack">
         <button class="btn primary sm" id="expBtn" style="width:100%"><i class="fa-solid fa-download"></i>  Exportar backup</button>
         <button class="btn ghost sm" id="impBtn" style="width:100%"><i class="fa-solid fa-upload"></i>  Importar backup</button>
@@ -878,10 +983,19 @@ function renderSettings(){
       <button class="btn ghost sm" id="clearWBtn" style="width:100%;margin-bottom:10px">Excluir todos os treinos</button>
       <button class="btn danger sm" id="resetBtn" style="width:100%">Apagar tudo (treinos + histórico)</button>
     </div>
-    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 50 · sincronizado na nuvem</p>`;
+    <p class="tiny muted" style="text-align:center;margin-top:24px">Meu Treino · versão 51 · dados no seu homeserver</p>`;
+  const srvStatus = ()=>{
+    const dot=$('srvDot'), txt=$('srvTxt'); if(!dot||!txt) return;
+    const n=DB.pendingCount();
+    if(DB.live()&&!n){ dot.style.color='var(--ok)'; txt.textContent='Sincronizado com o seu servidor'; }
+    else if(DB.live()){ dot.style.color='var(--muted)'; txt.textContent='Enviando '+n+' alteração(ões)…'; }
+    else{ dot.style.color='var(--muted)'; txt.textContent='Sem conexão com o servidor'+(n?' — '+n+' alteração(ões) esperando':'')+'. Ligue o Tailscale.'; }
+  };
+  srvStatus(); DB.onChange(srvStatus);
+  $('syncBtn').onclick = async()=>{ await DB.flush(); try{ await DB.test(); toast('Conectado ao servidor'); }catch(e){ toast('Não consegui falar com o servidor'); } srvStatus(); };
   $('logoutBtn').onclick = ()=>{
-    showConfirm('Sair da conta?','Seus dados continuam salvos na nuvem. Faça login de novo quando quiser.','Sair',async()=>{
-      closeSheet(); try{ await firebase.auth().signOut(); }catch(e){}
+    showConfirm('Trocar de servidor?','Seus dados continuam no servidor. Você informará o endereço e o token de novo.','Trocar',()=>{
+      closeSheet(); DB.clearConfig(); showServerSetup();
     });
   };
   $('expBtn').onclick = exportBackup;
@@ -1145,7 +1259,7 @@ async function loadData(){
   state.sessions = await DB.getAll('sessions');
   await loadDraft();
   let inited=null; try{ inited = await DB.get('meta','init'); }catch(e){}
-  if(!inited){
+  if(!inited && DB.live()){                // só semeia com o servidor alcançável (offline não duplica)
     if(!state.workouts.length){            // conta nova: cria o plano inicial uma única vez
       state.workouts = seed();
       for(const w of state.workouts) await DB.put('workouts', w);
@@ -1158,85 +1272,46 @@ async function loadData(){
 function showGate(html){ $('gate').innerHTML = html; $('gate').hidden = false; $('app').hidden = true; document.documentElement.classList.add('on-gate'); }
 function enterApp(){ $('gate').hidden = true; $('app').hidden = false; document.documentElement.classList.remove('on-gate'); requestAnimationFrame(()=>{ moveNavInd(); setTimeout(moveNavInd, 250); }); }
 
-function showConfigError(){
-  showGate(`<div class="logo"><i class="fa-solid fa-triangle-exclamation"></i></div>
-    <h1>Falta configurar</h1>
-    <p class="sub" style="max-width:320px">Abra o arquivo <b>firebase-config.js</b> e cole as chaves do seu projeto Firebase.<br>Veja o guia <b>FIREBASE-SETUP.md</b>.</p>`);
-}
-
-function showAccessDenied(email){
-  showGate(`<div class="logo"><i class="fa-solid fa-lock"></i></div>
-    <h1>Acesso não liberado</h1>
-    <p class="sub" style="max-width:330px">A conta <b>${esc(email||'')}</b> ainda não está na lista de pessoas autorizadas.<br>Peça pra quem administra o app adicionar o seu e-mail.</p>
-    <button class="btn ghost" id="denyOut" style="max-width:300px">Usar outra conta</button>`);
-  $('denyOut').onclick = async()=>{ try{ await firebase.auth().signOut(); }catch(e){} };
-}
-
-let authMode = 'login';
-function showLogin(){
-  const isLogin = authMode === 'login';
-  let last=''; try{ last = localStorage.getItem('lastEmail')||''; }catch(e){}
-  const quick = isLogin && !!last;   // login rápido: já tem conta lembrada
+/* ---------- Tela de conexão com o servidor ---------- */
+const DEFAULT_SERVER = 'https://homelab.tail69a525.ts.net:8447';
+function showServerSetup(msg){
+  let url = ''; try{ url = (JSON.parse(localStorage.getItem('treino.server')||'{}').url) || ''; }catch(e){}
   showGate(`
     <div class="logo"><i class="fa-solid fa-dumbbell"></i></div>
     <h1>Meu Treino</h1>
-    <p class="sub">${quick?'Bem-vinda de volta!':(isLogin?'Entre pra ver seus treinos em qualquer aparelho':'Crie sua conta — leva 10 segundos')}</p>
-    <form id="authForm" novalidate>
-      <div class="field"${quick?' hidden':''}><label>E-mail</label>
-        <input id="authEmail" type="email" autocomplete="username" inputmode="email" value="${esc(last)}" required></div>
-      ${quick?`<div class="small muted" style="text-align:center;margin:-4px 0 14px">Entrar como <b style="color:var(--fg)">${esc(last)}</b></div>`:''}
-      <div class="field"><label>Senha ${isLogin?'':'(mín. 6 caracteres)'}</label>
-        <input id="authPass" type="password" autocomplete="${isLogin?'current-password':'new-password'}" required></div>
-      ${isLogin?'':`<div class="field"><label>Confirmar senha</label>
-        <input id="authPass2" type="password" autocomplete="new-password" required></div>`}
-      <div class="msg" id="authMsg"></div>
-      <button class="btn primary" type="submit" id="authBtn">${isLogin?'Entrar':'Criar conta'}</button>
-      <div class="switch">${quick
-        ? '<button type="button" class="link" id="authOther">Usar outra conta</button>'
-        : `${isLogin?'Não tem conta?':'Já tem conta?'} <button type="button" class="link" id="authSwitch">${isLogin?'Criar agora':'Entrar'}</button>`}</div>
+    <p class="sub">Conecte ao seu homeserver<br>(o Tailscale precisa estar ligado)</p>
+    <form id="srvForm" novalidate>
+      <div class="field"><label>Endereço do servidor</label>
+        <input id="srvUrl" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(url||DEFAULT_SERVER)}" required></div>
+      <div class="field"><label>Token</label>
+        <input id="srvToken" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required></div>
+      <div class="msg err" id="srvMsg">${esc(msg||'')}</div>
+      <button class="btn primary" type="submit" id="srvBtn">Conectar</button>
     </form>`);
-  const sw=$('authSwitch'); if(sw) sw.onclick = ()=>{ authMode = isLogin?'signup':'login'; showLogin(); };
-  const other=$('authOther'); if(other) other.onclick = ()=>{ try{localStorage.removeItem('lastEmail');}catch(e){} authMode='login'; showLogin(); };
-  let authBusy = false;
-  $('authForm').onsubmit = async e=>{
+  $('srvForm').onsubmit = async e=>{
     e.preventDefault();
-    if(authBusy) return;                               // evita cliques repetidos
-    const email = $('authEmail').value.trim().toLowerCase(), pass = $('authPass').value;
-    if(!email || pass.length < 6){ authMsg('err','Preencha e-mail e senha (mín. 6).'); return; }
-    if(!isLogin && pass !== $('authPass2').value){ authMsg('err','As senhas não são iguais.'); return; }
-    authBusy = true;
-    $('authBtn').disabled = true; $('authBtn').textContent = 'Aguarde…';
-    authMsg('', '');                                   // limpa erro anterior
-    const reset = ()=>{ authBusy=false; const b=$('authBtn'); if(b){ b.disabled=false; b.textContent=isLogin?'Entrar':'Criar conta'; } };
-    try{
-      const op = isLogin
-        ? firebase.auth().signInWithEmailAndPassword(email, pass)
-        : firebase.auth().createUserWithEmailAndPassword(email, pass);
-      const timeout = new Promise((_,rej)=>setTimeout(()=>rej({code:'app/timeout'}), 15000));
-      await Promise.race([op, timeout]);               // nunca trava pra sempre
-      try{ localStorage.setItem('lastEmail', email); }catch(e){}
-      // sucesso: onAuthStateChanged assume a tela daqui (não reabilita o botão)
-    }catch(err){
-      reset();
-      authMsg('err', authErrMsg(err));
+    const u=$('srvUrl').value.trim(), t=$('srvToken').value.trim();
+    if(!/^https?:\/\//i.test(u) || t.length<8){ $('srvMsg').textContent='Preencha o endereço (https://…) e o token.'; return; }
+    $('srvBtn').disabled=true; $('srvBtn').textContent='Conectando…'; $('srvMsg').textContent='';
+    DB.configure(u,t);
+    try{ await DB.test(); await startApp(); }
+    catch(err){
+      DB.clearConfig();
+      const bad = err && err.status===401;
+      showServerSetup(bad ? 'Token incorreto.' : 'Não consegui falar com o servidor. Confira o endereço e se o Tailscale está ligado.');
     }
   };
-  setTimeout(()=>{ const f = quick ? $('authPass') : $('authEmail'); if(f) f.focus(); }, 120);
+  setTimeout(()=>{ const f=$('srvToken'); if(f) f.focus(); }, 120);
 }
-function authMsg(cls, text){ const el=$('authMsg'); if(el){ el.className='msg '+cls; el.textContent=text; } }
-function authErrMsg(err){
-  return ({
-    'auth/invalid-email':'E-mail inválido.',
-    'auth/user-not-found':'Conta não encontrada — crie uma conta.',
-    'auth/wrong-password':'Senha incorreta.',
-    'auth/invalid-credential':'E-mail ou senha incorretos.',
-    'auth/email-already-in-use':'Esse e-mail já tem conta. Faça login.',
-    'auth/weak-password':'Senha muito curta (mínimo 6).',
-    'auth/network-request-failed':'Sem internet. Tente de novo.',
-    'auth/too-many-requests':'Muitas tentativas. Aguarde um pouco.',
-    'auth/operation-not-allowed':'Ative o login por E-mail/Senha no Firebase (veja o guia).',
-    'app/timeout':'Sem resposta do servidor. Confira a internet e tente de novo.',
-  })[err && err.code] || ('Erro: ' + (err && (err.code||err.message)));
+
+async function startApp(){
+  showGate('<div class="spin">Carregando…</div>');
+  try{ await loadData(); }
+  catch(e){ console.error(e); toast('Erro ao carregar dados'); state.workouts=[]; state.sessions=[]; }
+  renderAll();
+  enterApp();
+  show('workouts');
+  DB.flush();
 }
 
 /* ---------- Handlers fixos da interface (ligados uma única vez) ---------- */
@@ -1281,44 +1356,7 @@ function bindStaticUI(){
 async function boot(){
   applyTheme(localStorage.getItem('theme')||'auto');
   bindStaticUI();
-
-  const cfg = window.firebaseConfig;
-  if(!cfg || !cfg.apiKey || /COLE|SEU-PROJETO/i.test(cfg.apiKey + cfg.projectId)){
-    showConfigError(); return;
-  }
-  try{ firebase.initializeApp(cfg); }
-  catch(e){ console.error(e); showGate('<div class="logo"><i class="fa-solid fa-triangle-exclamation"></i></div><h1>Erro na configuração</h1><p class="sub">Confira o firebase-config.js.</p>'); return; }
-
-  // cache offline: grava/lê localmente e sincroniza sozinho quando houver internet
-  try{ await firebase.firestore().enablePersistence({synchronizeTabs:true}); }
-  catch(e){ /* várias abas abertas ou navegador sem suporte — segue online */ }
-
-  showGate('<div class="spin">Carregando…</div>');
-
-  firebase.auth().onAuthStateChanged(async user=>{
-    if(user){
-      DB.setUser(user.uid);
-      state.currentUser = user;
-      try{ if(user.email) localStorage.setItem('lastEmail', user.email); }catch(e){}
-      showGate('<div class="spin">Sincronizando seus treinos…</div>');
-      try{
-        await loadData();
-      }catch(e){
-        console.error(e);
-        if(e && e.code==='permission-denied'){   // e-mail fora da allowlist
-          showAccessDenied(user.email);
-          return;
-        }
-        toast('Erro ao carregar dados'); state.workouts=[]; state.sessions=[];
-      }
-      renderAll();
-      enterApp();
-      show('workouts');
-    }else{
-      state.currentUser = null;
-      authMode = 'login';
-      showLogin();
-    }
-  });
+  if(!DB.configured()){ showServerSetup(); return; }
+  await startApp();
 }
 boot();

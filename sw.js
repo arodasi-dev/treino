@@ -3,12 +3,11 @@
    - Arquivos do app (mesmo domínio): NETWORK-FIRST → sempre pega a versão nova
      quando tem internet; se estiver offline, usa o cache.
    - CDNs (Firebase, fontes, Font Awesome): cache-first (mais rápido). */
-const CACHE = 'treino-v50';
+const CACHE = 'treino-v51';
 const ASSETS = [
   './',
   './index.html',
   './app.js',
-  './firebase-config.js',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
@@ -30,6 +29,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
+  if (url.pathname.startsWith('/api/') || url.hostname.endsWith('.ts.net')) return;   // dados nunca vêm do cache do SW
 
   if (url.origin === location.origin) {
     // NETWORK-FIRST: versão nova sempre que houver internet
