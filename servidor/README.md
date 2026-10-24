@@ -30,9 +30,17 @@ Um só usuário, protegido por token. O app (GitHub Pages) conversa com ele pelo
 
 ## Migrar os dados do Firestore
 
-Com o servidor no ar e o Tailscale ligado, abra `migrar.html` no app publicado,
-informe o endereço, o token, e o e-mail/senha que você já usa no app. A página copia
-tudo e confere as contagens. Pode rodar de novo sem duplicar. Nada é apagado do Firestore.
+Rode **no próprio servidor** (não precisa de navegador nem de Tailscale no seu aparelho):
+
+```bash
+cd ~/treino-app/servidor && python3 migrar.py
+```
+
+Ele pede o e-mail e a senha que você já usa no app, copia treinos e histórico e confere
+as contagens no fim. Pode rodar de novo sem duplicar. Nada é apagado do Firestore.
+
+(A página `migrar.html` faz o mesmo pelo navegador, mas exige que o domínio esteja
+autorizado no Firebase; o script acima evita isso.)
 
 ## Backup
 
